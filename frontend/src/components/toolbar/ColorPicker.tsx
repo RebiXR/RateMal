@@ -3,7 +3,7 @@
 
 
 import { useContext } from "react";
-import { AppContext } from "../context/AppContext";
+import { AppContext } from "../../context/AppContext";
 
 const colors = ["black","red","blue","green","yellow","purple","orange","pink"];
 
