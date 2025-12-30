@@ -14,7 +14,9 @@ import { emitDraw, onDraw, offDraw } from "../../socket/drawingEvents";
 type Point = { x: number; y: number };
 
 export default function Canvas() {
-  const { currentColor } = useContext(AppContext);
+  const { currentColor, activeLobbyId } = useContext(AppContext);
+
+  
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
@@ -48,6 +50,7 @@ export default function Canvas() {
   };
 
   const draw = (e: MouseEvent | TouchEvent) => {
+    if (!activeLobbyId) return;
     if (!isDrawing.current || !lastPoint.current) return;
 
     const ctx = canvasRef.current!.getContext("2d")!;
@@ -65,9 +68,12 @@ export default function Canvas() {
 
     // minimal info that is sent over socket- functino call socket 
     emitDraw({
-      from: lastPoint.current,
-      to: p,
-      color: currentColor,
+      lobbyId: activeLobbyId,
+      data: {
+        from: lastPoint.current,
+        to: p,
+        color: currentColor,
+      }
     });
 
 
