@@ -8,7 +8,7 @@ import App from './App.tsx'
 import AppProvider from "./context/AppContext";
 
 createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
+  <React.StrictMode>
     <AppProvider>
       <App />
     </AppProvider>

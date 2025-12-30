@@ -8,8 +8,13 @@ type DrawEvent = {
   color: string;
 };
 
-export const emitDraw = (data: DrawEvent) => {
-  socket.emit("draw", data);
+type DrawPayload = {
+  lobbyId: string;
+  data: DrawEvent;
+}
+
+export const emitDraw = (payload: DrawPayload) => {
+  socket.emit("draw", payload);
 };
 
 export const onDraw = (callback: (data: DrawEvent) => void) => {

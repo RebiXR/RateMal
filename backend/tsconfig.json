@@ -23,7 +23,9 @@
     "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
 
     // Other Outputs
     /*"sourceMap": true,
