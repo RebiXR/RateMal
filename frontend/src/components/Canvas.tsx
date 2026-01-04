@@ -8,14 +8,14 @@ import { useRef, useState, useEffect, useContext, useCallback } from "react";
 import io from "socket.io-client";
 import { AppContext } from "../context/AppContext";
 
-
+//each line has an identifier, points in array form ans a color
 interface LineType {
   id: string;
   points: number[];
   color: string;
 }
 
-const socket = io("http://localhost:3000");
+const socket = io("http://localhost:3000"); // connection to backend
 
 export default function Canvas() {
   const { currentColor } = useContext(AppContext);
@@ -31,7 +31,7 @@ export default function Canvas() {
   const isDrawing = useRef(false);
   const lastEmit = useRef(Date.now());
 
-  // Socket: lines from diffrent client  fitting
+  // Socket: lines from diffrent client  fitting from the backend
   useEffect(() => {
     socket.on("draw", (data: LineType) => {
       setRemoteLines(prev => [...prev, data]);
@@ -41,6 +41,8 @@ export default function Canvas() {
     };
   }, []);
 
+  // what happens when mousedown, starts new line when mouse is clicked
+  //line gets an id and color
   const handleMouseDown = useCallback((e: any) => {
     isDrawing.current = true;
     const pos = e.target.getStage().getPointerPosition();
@@ -55,6 +57,7 @@ export default function Canvas() {
     setLocalLines(prev => [...prev, newLine]);
   }, [currentColor]);
 
+  //here new points from moving mouse get added to list
   const handleMouseMove = useCallback((e: any) => {
     if (!isDrawing.current) return;
     const stage = e.target.getStage();
@@ -80,6 +83,7 @@ export default function Canvas() {
     });
   }, []);
 
+  // stopp when mouse is released
   const handleMouseUp = useCallback(() => {
     isDrawing.current = false;
   }, []);
