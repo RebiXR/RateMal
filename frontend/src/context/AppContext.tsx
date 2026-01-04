@@ -18,6 +18,7 @@ const preposition = ["und", "neben", "unter", "vor", "hinter"];
 export const AppContext = createContext<any>({});
 
 
+
 const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentColor, setCurrentColor] = useState("black");
 
@@ -54,9 +55,12 @@ const requestGroupPrompt = () => {
   setCurrentPrompt(newPrompt);
 }
 
+  
+  const [activeLobbyId, setActiveLobbyId] = useState<string | null>(null)
 
   return (
-    <AppContext.Provider value={{ currentColor, setCurrentColor, currentPrompt, changePrompt, groupPrompt, requestGroupPrompt}}>
+    <AppContext.Provider value={{ currentColor, setCurrentColor, currentPrompt, changePrompt, groupPrompt, requestGroupPrompt, activeLobbyId, setActiveLobbyId}}>
+    
       {children}
     </AppContext.Provider>
   );
@@ -64,5 +68,5 @@ const requestGroupPrompt = () => {
 
 export default AppProvider;
 
-
+ 
 

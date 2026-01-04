@@ -1,18 +1,26 @@
 import { useState } from 'react'
 import './App.css'
-import Canvas from "./components/Canvas";
-import ColorPicker from './components/ColorPicker';
+
 import Prompts from './components/Prompts';
+import Canvas from "./components/canvas/Canvas";
+import ColorPicker from './components/toolbar/ColorPicker';
+import LobbySelector from './components/canvas/LobbySelector';
+import { twoKeyControls } from './input/twoKeyControls';
+
+
 function App() {
   //const [count, setCount] = useState(0)
+  twoKeyControls(); // activate
 
   return (
-    <>
-    {/*<ColorPicker />*/}
-    <Prompts/>
-    <ColorPicker />
-    <Canvas />
-    </>
+  
+    <div>
+      {/*<ColorPicker />*/}
+      <Prompts/>
+      <LobbySelector />
+      <ColorPicker />
+      <Canvas />
+    </div>
   )
 }
 
