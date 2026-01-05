@@ -9,6 +9,10 @@ app.use(cors());
 
 const httpServer = createServer(app);
 
+
+const prompts = ["Haus", "Hund", "Katze", "Vogel", "Baum", "Blume", "Sonne", "Kuchen", "Pinsel", "Wolke", "Pferd", "Schmetterling", "Boot", "Apfel", "Karotte", "Hase", "Zug", "Tulpe", "Mann", "Frau", "Auto", "Stern", "Kleeblatt", "Blatt", "Maus", "Regenbogen", "Tropfen", "Schlange"];
+const preposition = ["auf", "neben", "unter", "vor", "hinter"];
+
 const io = new Server(httpServer, {
   cors: { origin: "*" },
 });
@@ -34,6 +38,16 @@ io.on("connection", (socket) => {
 
     socket.to(lobbyId).emit("draw", data)
   })
+
+  //for the group: 
+  //mit lobby ???????????????????????????
+  socket.on("newGroupPrompt", () => {
+    const randomPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)]);
+  
+    // für die anderen spieler
+    io.emit("groupPrompt", randomPrompt);
+  });
+
 
   socket.on("disconnect", () => {
     for(const lobby of lobbies.values()) {
