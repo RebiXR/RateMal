@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './App.css'
+import Prompts from './components/canvas/Prompts';
 import Canvas from "./components/canvas/Canvas";
 import ColorPicker from './components/toolbar/ColorPicker';
 import LobbySelector from './components/canvas/LobbySelector';
@@ -15,6 +16,7 @@ function App() {
   return (
     <div>
       {/*<ColorPicker />*/}
+      <Prompts />
       <LobbySelector />
       <ColorPicker />
       <Canvas />
