@@ -37,7 +37,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
 }, []);
 
 const requestGroupPrompt = () => {
- socket.emit("newGroupPrompt");
+  if (!activeLobbyId) return;
+  socket.emit("newGroupPrompt", activeLobbyId);
 };
   //---------------------------------------
    //---------------------------------------

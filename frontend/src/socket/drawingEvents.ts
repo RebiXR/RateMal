@@ -7,6 +7,7 @@ type lineDrawEvent = {
   from: Point;
   to: Point;
   color: string;
+  width?: number; //optional
 };
 
 type BlobDrawEvent = {
@@ -35,4 +36,12 @@ export const onDraw = (callback: (data: DrawEvent) => void) => {
 
 export const offDraw = () => {
   socket.off("draw");
+};
+
+export const onCanvasSync = (callback: (history: DrawEvent[]) => void) => {
+  socket.on("canvas-sync", callback);
+};
+
+export const offCanvasSync = () => {
+  socket.off("canvas-sync");
 };
