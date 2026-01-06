@@ -7,7 +7,7 @@
 import { useRef, useEffect, useContext } from "react";
 //import io from "socket.io-client";
 import { AppContext } from "../../context/AppContext";
-import { emitDraw, onDraw, offDraw } from "../../socket/drawingEvents";
+import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync } from "../../socket/drawingEvents";
 
 //const socket = io("http://localhost:3000");
 
@@ -113,6 +113,23 @@ export default function Canvas() {
       ctx.stroke();
     });
 
+    onCanvasSync((history) => {
+      // optional: Canvas löschen und neu zeichnen
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const ev of history) {
+        ctx.strokeStyle = ev.color;
+        ctx.lineWidth = ev.width ?? 4;
+        ctx.lineCap = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(ev.from.x, ev.from.y);
+        ctx.lineTo(ev.to.x, ev.to.y);
+        ctx.stroke();
+      }
+
+      console.log("SYNC HISTORY", history.length);
+    });
     /*socket.on("draw", (data) => {
       ctx.strokeStyle = data.color;
       ctx.lineWidth = 4;
@@ -126,6 +143,7 @@ export default function Canvas() {
 
     return () => {
        offDraw();
+      offCanvasSync();
       //socket.off("draw");
     };
   }, []);

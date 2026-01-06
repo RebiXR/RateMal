@@ -2,7 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { lobbies } from "../backend/lobby.ts"
+import { lobbies } from "./lobby.ts"
 
 const app = express();
 app.use(cors());
@@ -17,6 +17,19 @@ const io = new Server(httpServer, {
   cors: { origin: "*" },
 });
 
+
+type PointN = { x: number; y: number }; // normalized 0..1
+
+type DrawEvent = {
+  from: PointN;
+  to: PointN;
+  color: string;
+  width: number;
+};
+
+// Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
+const lobbyHistory = new Map<string, DrawEvent[]>();
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -30,23 +43,39 @@ io.on("connection", (socket) => {
 
     socket.join(lobbyId)
     lobby.participants.add(socket.id)
+    if (!lobbyHistory.has(lobbyId)) lobbyHistory.set(lobbyId, []);
+    socket.emit("canvas-sync", lobbyHistory.get(lobbyId));
     socket.to(lobbyId).emit("User connected", userId)
   });
 
-  socket.on("draw", ({lobbyId, data}) => {
-    //socket.broadcast.emit("draw", data);
+  socket.on("draw", ({ lobbyId, data }: { lobbyId: string; data: DrawEvent }) => {
+    if (!lobbyId) return;
+
+    // speichern für spätere Joiner
+    const hist = lobbyHistory.get(lobbyId) ?? [];
+    hist.push(data);
+
+    // optional: begrenzen, damit RAM nicht unendlich wächst
+    // if (hist.length > 50_000) hist.splice(0, hist.length - 50_000);
+
+    lobbyHistory.set(lobbyId, hist);
 
     socket.to(lobbyId).emit("draw", data)
   })
 
   //for the group: 
   //mit lobby ???????????????????????????
-  socket.on("newGroupPrompt", () => {
-    const randomPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)]);
-  
-    // für die anderen spieler
-    io.emit("groupPrompt", randomPrompt);
+// for the group (Prompt nur in der Lobby senden)
+  socket.on("newGroupPrompt", (lobbyId: string) => {
+    const randomPrompt =
+        prompts[Math.floor(Math.random() * prompts.length)] + " " +
+        preposition[Math.floor(Math.random() * preposition.length)] + " " +
+        prompts[Math.floor(Math.random() * prompts.length)];
+
+    // nur an Spieler in dieser Lobby
+    io.to(lobbyId).emit("groupPrompt", randomPrompt);
   });
+
 
 
   socket.on("disconnect", () => {
@@ -58,7 +87,7 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 
-  
+
 });
 
 httpServer.listen(3000, () => console.log("Backend läuft auf Port 3000"));
