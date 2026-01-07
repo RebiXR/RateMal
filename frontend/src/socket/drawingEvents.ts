@@ -2,11 +2,23 @@ import { socket } from "./socket";
 
 type Point = { x: number; y: number };
 
-type DrawEvent = {
+type lineDrawEvent = {
+  type: "line"
   from: Point;
   to: Point;
   color: string;
 };
+
+type BlobDrawEvent = {
+  type: "blob"
+  x: number;
+  y: number;
+  color: string;
+};
+
+
+export type DrawEvent = lineDrawEvent |BlobDrawEvent;
+
 
 type DrawPayload = {
   lobbyId: string;

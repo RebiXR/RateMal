@@ -14,7 +14,7 @@ import { emitDraw, onDraw, offDraw } from "../../socket/drawingEvents";
 type Point = { x: number; y: number };
 
 export default function Canvas() {
-  const { currentColor, activeLobbyId } = useContext(AppContext);
+  const { currentColor, activeLobbyId,tool , activeShape } = useContext(AppContext);
 
   
 
@@ -42,9 +42,47 @@ export default function Canvas() {
     };
   };
 
+  const drawBlob = (x: number, y: number, color: string) => {
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+
+
+
+
+
 
 
   const startDraw = (e: MouseEvent | TouchEvent) => {
+    
+      if (!activeLobbyId) return;
+
+  const p = getPos(e);
+
+  // SHAPE-MODUS
+  if (tool === "shape" && activeShape === "blob") {
+    drawBlob(p.x, p.y, currentColor);
+
+    emitDraw({
+      lobbyId: activeLobbyId,
+      data: {
+        type: "blob",
+        x: p.x,
+        y: p.y,
+        color: currentColor,
+      },
+    });
+
+    return; 
+  }
+    
+  
+    
     isDrawing.current = true;
     lastPoint.current = getPos(e);
   };
@@ -70,6 +108,7 @@ export default function Canvas() {
     emitDraw({
       lobbyId: activeLobbyId,
       data: {
+        type: "line",
         from: lastPoint.current,
         to: p,
         color: currentColor,
@@ -103,6 +142,13 @@ export default function Canvas() {
     canvas.height = window.innerHeight;
 
     onDraw((data) => {
+
+
+      if (data.type === "blob") {
+        drawBlob(data.x, data.y, data.color);
+      return;
+  }
+
       ctx.strokeStyle = data.color;
       ctx.lineWidth = 4;
       ctx.lineCap = "round";
