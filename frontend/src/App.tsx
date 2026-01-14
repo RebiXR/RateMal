@@ -5,6 +5,8 @@ import Canvas from "./components/canvas/Canvas";
 import ColorPicker from './components/toolbar/ColorPicker';
 import LobbySelector from './components/canvas/LobbySelector';
 import { twoKeyControls } from './input/twoKeyControls';
+import ShapeButton from './components/toolbar/ShapeButton';
+import PenButton from './components/toolbar/PenButton';
 
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
       <LobbySelector />
       <ColorPicker />
       <Canvas />
+      <ShapeButton/>
+      <PenButton/>
     </div>
   )
 }
