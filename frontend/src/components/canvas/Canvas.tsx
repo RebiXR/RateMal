@@ -42,18 +42,87 @@ export default function Canvas() {
     };
   };
 
+
+
+
+  type BlobPoint = { x: number; y: number };
+
+  const createPermanentBlobShape = (
+    radius = 28,
+    points = 55,
+    variance = 8
+  ): BlobPoint[] => {
+    const shape: BlobPoint[] = [];
+
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const r = radius + (Math.random() - 0.5) * variance;
+
+      shape.push({
+        x: Math.cos(angle) * r,
+        y: Math.sin(angle) * r,
+      });
+    }
+
+    return shape;
+  };
+
+  const PERMANENT_BLOB = createPermanentBlobShape();
+
+
+
   const drawBlob = (x: number, y: number, color: string) => {
+    
+    /*original
     const ctx = canvasRef.current!.getContext("2d")!;
     ctx.fillStyle = color;
 
     ctx.beginPath();
     ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();*/
+
+
+
+    /*const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.fillStyle = color;
+
+    // gute werte :50
+    const radius = 28;
+    const points = 75;
+    const variance= 8.5;
+
+    ctx.beginPath();
+
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const r = radius + Math.random() * variance-variance/2 ;
+      const px = x + Math.cos(angle) * r;
+      const py = y + Math.sin(angle) * r;
+
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+
+    ctx.closePath();
+    //ctx.shadowColor = color;
+    //ctx.shadowBlur = 10;
+    ctx.fill();*/
+    const ctx = canvasRef.current!.getContext("2d")!;
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    PERMANENT_BLOB.forEach((p, i) => {
+      const px = x + p.x;
+      const py = y + p.y;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
     ctx.fill();
+
+
+  
   };
-
-
-
-
 
 
 
@@ -163,7 +232,13 @@ export default function Canvas() {
       // optional: Canvas löschen und neu zeichnen
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      console.log("SYNC HISTORY", history.length);
       for (const ev of history) {
+
+        if(ev.type ==="blob" ){
+          drawBlob(ev.x,ev.y,ev.color);
+          continue;
+        }
         ctx.strokeStyle = ev.color;
         ctx.lineWidth = ev.width ?? 4;
         ctx.lineCap = "round";
@@ -174,18 +249,9 @@ export default function Canvas() {
         ctx.stroke();
       }
 
-      console.log("SYNC HISTORY", history.length);
     });
-    /*socket.on("draw", (data) => {
-      ctx.strokeStyle = data.color;
-      ctx.lineWidth = 4;
-      ctx.lineCap = "round";
 
-      ctx.beginPath();
-      ctx.moveTo(data.from.x, data.from.y);
-      ctx.lineTo(data.to.x, data.to.y);
-      ctx.stroke();
-    });*/
+
 
     return () => {
        offDraw();

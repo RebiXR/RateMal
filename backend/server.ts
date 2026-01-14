@@ -17,15 +17,26 @@ const io = new Server(httpServer, {
   cors: { origin: "*" },
 });
 
-
+// not nomalized 
 type PointN = { x: number; y: number }; // normalized 0..1
 
-type DrawEvent = {
+
+type LineDrawEvent ={
+  type:"line";
   from: PointN;
-  to: PointN;
-  color: string;
-  width: number;
+  to:PointN;
+  color:string;
+  width:number;
 };
+type BlobDrawEvent ={
+  type:"blob";
+  x: number;
+  y:number;
+  color:string;
+};
+
+
+type DrawEvent = LineDrawEvent| BlobDrawEvent;
 
 // Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
 const lobbyHistory = new Map<string, DrawEvent[]>();
