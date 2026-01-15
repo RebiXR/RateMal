@@ -105,14 +105,14 @@ io.on("connection", (socket) => {
       socket.emit("No Lobby")
       return
     }
-    const participants: Set<string> = lobby?.participants
-    const host: string = getRandomItem(participants)
-    
     // get random item from a Set
     function getRandomItem(set: Set<string>) {
         let items = Array.from(set);
         return items[Math.floor(Math.random() * items.length)];
     }
+
+    const participants: Set<string> = lobby?.participants
+    const host: string = getRandomItem(participants)
 
     const guessingGame = createDrawGame()
     guessingGame.participants = participants
@@ -122,13 +122,12 @@ io.on("connection", (socket) => {
     guessingGameLobby.set(lobbyId, guessingGame)
 
     io.to(lobbyId).emit("drawGuessGame", {
-      [lobbyId]: {
         id: guessingGame.id,
-        drawPromt: guessingGame.drawPrompt,
+        drawPrompt: guessingGame.drawPrompt,
         drawMasterId: guessingGame.drawMasterId!,
         participants: Array.from(guessingGame.participants),
         answerOptions: Array.from(guessingGame.answers)
-      }
+      
     })
   })
 
