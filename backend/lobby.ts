@@ -26,3 +26,4 @@ function createLobby() {
 }
 
 export const lobbies = createLobby()
+export {Lobby}

@@ -7,6 +7,7 @@ import LobbySelector from './components/canvas/LobbySelector';
 import { twoKeyControls } from './input/twoKeyControls';
 import ShapeButton from './components/toolbar/ShapeButton';
 import PenButton from './components/toolbar/PenButton';
+import GuessingGameCreator from './components/canvas/GuessingGame';
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
       <Canvas />
       <ShapeButton/>
       <PenButton/>
+      <GuessingGameCreator/>
     </div>
   )
 }

@@ -99,10 +99,11 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 
-  socket.on("selectGuessingGame", (lobbyId: string) => {
+  socket.on("createGuessingGame", (lobbyId: string) => {
     const lobby = lobbies.get(lobbyId)
     if (!lobby){
-      throw new Error("No Lobby")
+      socket.emit("No Lobby")
+      return
     }
     const participants: Set<string> = lobby?.participants
     const host: string = getRandomItem(participants)
@@ -111,7 +112,7 @@ io.on("connection", (socket) => {
     function getRandomItem(set: Set<string>) {
         let items = Array.from(set);
         return items[Math.floor(Math.random() * items.length)];
-}
+    }
 
     const guessingGame = createDrawGame()
     guessingGame.participants = participants
@@ -119,6 +120,16 @@ io.on("connection", (socket) => {
 
     const guessingGameLobby = new Map<string, GuessingGame>()
     guessingGameLobby.set(lobbyId, guessingGame)
+
+    io.to(lobbyId).emit("drawGuessGame", {
+      [lobbyId]: {
+        id: guessingGame.id,
+        drawPromt: guessingGame.drawPrompt,
+        drawMasterId: guessingGame.drawMasterId!,
+        participants: Array.from(guessingGame.participants),
+        answerOptions: Array.from(guessingGame.answers)
+      }
+    })
   })
 
 
