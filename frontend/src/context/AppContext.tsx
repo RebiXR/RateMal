@@ -4,9 +4,12 @@
 //----------------------------------------------------
 
 import { createContext, useState, type ReactNode, useEffect } from "react";
-import io from "socket.io-client";
+import type { GuessingGame } from "../components/canvas/GuessingGame";
+//import io from "socket.io-client";
+import { socket } from "../socket/socket";
 
-const socket = io("http://localhost:3000");
+
+//const socket = io("http://localhost:3000");
 
 const prompts = ["Haus", "Hund", "Katze", "Vogel", "Baum", "Blume", "Sonne", "Kuchen", "Pinsel", "Wolke", "Pferd", "Schmetterling", "Boot", "Apfel", "Karotte", "Hase", "Zug", "Tulpe", "Mann", "Frau", "Auto", "Stern", "Kleeblatt", "Blatt", "Maus", "Regenbogen", "Tropfen", "Schlange"];
 const preposition = ["und", "neben", "unter", "vor", "hinter"];
@@ -26,6 +29,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   // this is the group prompt:
   const [groupPrompt, setGroupPrompt] = useState("Was sollen wir heute zeichnen?");
 
+  const [guessingGame, setGuessingGame] = useState<GuessingGame | null>(null)
+   
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
     setGroupPrompt(prompt);
@@ -35,6 +40,17 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
     socket.off("groupPrompt");
   };
 }, []);
+
+  useEffect(() => {
+
+    socket.on("drawGuessGame", (game: GuessingGame) => {
+      setGuessingGame(game);
+    });
+
+    return () => {
+      socket.off("drawGuessGame");
+    };
+  }, []);
 
 const requestGroupPrompt = () => {
   if (!activeLobbyId) return;
@@ -74,6 +90,7 @@ const requestGroupPrompt = () => {
       setTool, 
       activeShape,
       setActiveShape,
+      guessingGame
 
       }}>
   
