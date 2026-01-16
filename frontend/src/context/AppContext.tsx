@@ -5,7 +5,7 @@
 
 import { createContext, useState, type ReactNode, useEffect } from "react";
 import type { GuessingGame } from "../components/canvas/GuessingGame";
-import io from "socket.io-client";
+//import io from "socket.io-client";
 import { socket } from "../socket/socket";
 
 
@@ -30,8 +30,7 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [groupPrompt, setGroupPrompt] = useState("Was sollen wir heute zeichnen?");
 
   const [guessingGame, setGuessingGame] = useState<GuessingGame | null>(null)
-  
-
+   
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
     setGroupPrompt(prompt);

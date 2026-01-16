@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import { startGuessingGame, giveGuess } from "../../socket/selectLobby";
+import { socket } from "../../socket/socket";
 
 
 export interface GuessingGame {
@@ -32,11 +33,13 @@ export default function GuessingGameCreator() {
         </div>
     )}
 
-    return (
+    if(socket.id === guessingGame.drawMasterId) { return (
         <div>
             <h2>Zeichne: </h2>
             <p>{guessingGame.drawPrompt}</p>
-
+        </div>
+    )} else { return (
+        <div>
             <div>
                 {guessingGame.answerOptions.map((answer: string) => (
                     <button
@@ -47,7 +50,6 @@ export default function GuessingGameCreator() {
                     </button>
                 ))}
             </div>
-
         </div>
-    )
+    )}
 }
