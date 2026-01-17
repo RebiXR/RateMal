@@ -2,7 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { lobbies } from "./lobby.ts"
+import { lobbies, Lobby } from "./lobby.ts"
+import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 
 const app = express();
 app.use(cors());
@@ -97,6 +98,38 @@ io.on("connection", (socket) => {
     }
     console.log("User disconnected:", socket.id);
   });
+
+  socket.on("createGuessingGame", (lobbyId: string) => {
+    const lobby = lobbies.get(lobbyId)
+    if (!lobby){
+      socket.emit("No Lobby")
+      return
+    }
+    // get random item from a Set
+    function getRandomItem(set: Set<string>) {
+        let items = Array.from(set);
+        return items[Math.floor(Math.random() * items.length)];
+    }
+
+    const participants: Set<string> = lobby?.participants
+    const host: string = getRandomItem(participants)
+
+    const guessingGame = createDrawGame()
+    guessingGame.participants = participants
+    guessingGame.drawMasterId = host
+
+    const guessingGameLobby = new Map<string, GuessingGame>()
+    guessingGameLobby.set(lobbyId, guessingGame)
+
+    io.to(lobbyId).emit("drawGuessGame", {
+        id: guessingGame.id,
+        drawPrompt: guessingGame.drawPrompt,
+        drawMasterId: guessingGame.drawMasterId!,
+        participants: Array.from(guessingGame.participants),
+        answerOptions: Array.from(guessingGame.answers)
+      
+    })
+  })
 
 
 });
