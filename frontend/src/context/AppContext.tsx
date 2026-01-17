@@ -4,9 +4,12 @@
 //----------------------------------------------------
 
 import { createContext, useState, type ReactNode, useEffect } from "react";
-import io from "socket.io-client";
+import type { GuessingGame } from "../components/canvas/GuessingGame";
+//import io from "socket.io-client";
+import { socket } from "../socket/socket";
 
-const socket = io("http://localhost:3000");
+
+//const socket = io("http://localhost:3000");
 
 const prompts = ["Haus", "Hund", "Katze", "Vogel", "Baum", "Blume", "Sonne", "Kuchen", "Pinsel", "Wolke", "Pferd", "Schmetterling", "Boot", "Apfel", "Karotte", "Hase", "Zug", "Tulpe", "Mensch", "Auto", "Stern", "Kleeblatt", "Blatt", "Maus", "Regenbogen", "Tropfen", "Schlange"];
 const preposition = ["und", "neben", "vor", "mit"];
@@ -20,10 +23,14 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentColor, setCurrentColor] = useState("black");
   //const [currentPrompt, setCurrentPrompt] = useState("Zeichne etwas Einfaches");
   const [activeLobbyId, setActiveLobbyId] = useState<string | null>(null)
+  const [tool, setTool] = useState<"pen" | "shape">("pen");
+  const [activeShape, setActiveShape] = useState<"blob" | null>(null);
   //--------------------------------
   // this is the group prompt:
   const [groupPrompt, setGroupPrompt] = useState("Was sollen wir heute zeichnen?");
 
+  const [guessingGame, setGuessingGame] = useState<GuessingGame | null>(null)
+   
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
     setGroupPrompt(prompt);
@@ -34,8 +41,20 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 }, []);
 
+  useEffect(() => {
+
+    socket.on("drawGuessGame", (game: GuessingGame) => {
+      setGuessingGame(game);
+    });
+
+    return () => {
+      socket.off("drawGuessGame");
+    };
+  }, []);
+
 const requestGroupPrompt = () => {
- socket.emit("newGroupPrompt");
+  if (!activeLobbyId) return;
+  socket.emit("newGroupPrompt", activeLobbyId);
 };
   //---------------------------------------
    //---------------------------------------
@@ -54,8 +73,27 @@ const requestGroupPrompt = () => {
 
 
 
+
   return (
-    <AppContext.Provider value={{ currentColor, setCurrentColor, currentPrompt, setCurrentPrompt, activeLobbyId, setActiveLobbyId, changePrompt, groupPrompt, requestGroupPrompt }}>
+    <AppContext.Provider 
+    value={{ 
+      currentColor, 
+      setCurrentColor, 
+      currentPrompt, 
+      setCurrentPrompt, 
+      activeLobbyId, 
+      setActiveLobbyId,
+      changePrompt, 
+      groupPrompt, 
+      requestGroupPrompt,
+      tool,
+      setTool, 
+      activeShape,
+      setActiveShape,
+      guessingGame
+
+      }}>
+  
       {children}
     </AppContext.Provider>
   );

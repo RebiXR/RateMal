@@ -2,7 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { lobbies } from "../backend/lobby.ts"
+import { lobbies, Lobby } from "./lobby.ts"
+import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,30 @@ const io = new Server(httpServer, {
   cors: { origin: "*" },
 });
 
+// not nomalized 
+type PointN = { x: number; y: number }; // normalized 0..1
+
+
+type LineDrawEvent ={
+  type:"line";
+  from: PointN;
+  to:PointN;
+  color:string;
+  width:number;
+};
+type BlobDrawEvent ={
+  type:"blob";
+  x: number;
+  y:number;
+  color:string;
+};
+
+
+type DrawEvent = LineDrawEvent| BlobDrawEvent;
+
+// Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
+const lobbyHistory = new Map<string, DrawEvent[]>();
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -31,11 +56,22 @@ io.on("connection", (socket) => {
 
     socket.join(lobbyId)
     lobby.participants.add(socket.id)
+    if (!lobbyHistory.has(lobbyId)) lobbyHistory.set(lobbyId, []);
+    socket.emit("canvas-sync", lobbyHistory.get(lobbyId));
     socket.to(lobbyId).emit("User connected", userId)
   });
 
-  socket.on("draw", ({lobbyId, data}) => {
-    //socket.broadcast.emit("draw", data);
+  socket.on("draw", ({ lobbyId, data }: { lobbyId: string; data: DrawEvent }) => {
+    if (!lobbyId) return;
+
+    // speichern für spätere Joiner
+    const hist = lobbyHistory.get(lobbyId) ?? [];
+    hist.push(data);
+
+    // optional: begrenzen, damit RAM nicht unendlich wächst
+    // if (hist.length > 50_000) hist.splice(0, hist.length - 50_000);
+
+    lobbyHistory.set(lobbyId, hist);
 
     socket.to(lobbyId).emit("draw", data)
   })
@@ -50,6 +86,7 @@ io.on("connection", (socket) => {
   });
 
 
+
   socket.on("disconnect", () => {
     for(const lobby of lobbies.values()) {
       if(lobby.participants.delete(socket.id)){
@@ -59,7 +96,39 @@ io.on("connection", (socket) => {
     console.log("User disconnected:", socket.id);
   });
 
-  
+  socket.on("createGuessingGame", (lobbyId: string) => {
+    const lobby = lobbies.get(lobbyId)
+    if (!lobby){
+      socket.emit("No Lobby")
+      return
+    }
+    // get random item from a Set
+    function getRandomItem(set: Set<string>) {
+        let items = Array.from(set);
+        return items[Math.floor(Math.random() * items.length)];
+    }
+
+    const participants: Set<string> = lobby?.participants
+    const host: string = getRandomItem(participants)
+
+    const guessingGame = createDrawGame()
+    guessingGame.participants = participants
+    guessingGame.drawMasterId = host
+
+    const guessingGameLobby = new Map<string, GuessingGame>()
+    guessingGameLobby.set(lobbyId, guessingGame)
+
+    io.to(lobbyId).emit("drawGuessGame", {
+        id: guessingGame.id,
+        drawPrompt: guessingGame.drawPrompt,
+        drawMasterId: guessingGame.drawMasterId!,
+        participants: Array.from(guessingGame.participants),
+        answerOptions: Array.from(guessingGame.answers)
+      
+    })
+  })
+
+
 });
 
 httpServer.listen(3000, () => console.log("Backend läuft auf Port 3000"));
