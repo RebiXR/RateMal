@@ -1,0 +1,49 @@
+/* Basis-Button */
+.btn {
+  padding: 2rem 3rem;
+  font-size: 1.5rem;
+  border-radius: 16px;
+  border: none;
+
+  background: linear-gradient(135deg, hsl(243, 64%, 78%), #9e9fd5);
+  color: white;
+
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease,
+    background 0.2s ease;
+}
+
+/* Hover */
+.btn:hover {
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Klick-Feedback */
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Fokus (Tastatur!) */
+.btn:focus-visible {
+  outline: 4px solid #c7d2fe;
+  outline-offset: 4px;
+}
+
+/* Disabled */
+.btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-secondary {
+   background: white;
+  color: #4f46e5;
+  border: 3.5px solid #4f46e5;
+}
+

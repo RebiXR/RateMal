@@ -7,6 +7,8 @@ import LobbySelector from './components/canvas/LobbySelector';
 import { twoKeyControls } from './input/twoKeyControls';
 
 
+
+
 function App() {
   //const [count, setCount] = useState(0)
   twoKeyControls(); // activate
@@ -18,6 +20,7 @@ function App() {
       <LobbySelector />
       <ColorPicker />
       <Canvas />
+      
     </div>
   )
 }

@@ -2,6 +2,7 @@
 import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import { twoKeyControls } from "../../input/twoKeyControls";
+import "../../style/colorPicker.css";
 
 export const COLORS = [
   "black",
@@ -21,7 +22,8 @@ export default function ColorPicker() {
   const { scanIndex}= twoKeyControls();
 
   return (
-    <div style={{position:"fixed", top:"10px", left:"10px", display:"flex", gap:"5px", backgroundColor:"white", padding:"10px", borderRadius:"8px", zIndex:1000, boxShadow:"0 0 10px rgba(0,0,0,0.2)"}}>
+    /*
+    <div className="color-picker">
       {COLORS.map((color, index)=>(
 
         <div key={color} onClick={()=>setCurrentColor(color)}
@@ -40,6 +42,27 @@ export default function ColorPicker() {
 
       ))}
 
+    </div>*/
+    
+    <div className="color-picker">
+      {COLORS.map((color, index) => {
+        const classes = [
+          "color-swatch",
+          color === "white" ? "white" : "",
+          currentColor === color ? "active" : "",
+          index === scanIndex ? "scan" : "",
+        ].join(" ");
+
+        return (
+          <div
+            key={color}
+            className={classes}
+            style={{ backgroundColor: color }}
+            onClick={() => setCurrentColor(color)}
+          />
+                 );
+      })}
     </div>
+
   );
 }

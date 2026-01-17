@@ -137,7 +137,7 @@ export default function Canvas() {
       ref={canvasRef}
       //width={window.innerWidth}
       //height={window.innerHeight}
-      style={{ border: "1px solid #ccc", touchAction: "none" }}
+      style={{ border: "1px solid #ccc", touchAction: "none", backgroundColor: "#ffffff" }}
       onMouseDown={(e) => startDraw(e.nativeEvent)}
       onMouseMove={(e) => draw(e.nativeEvent)}
       onMouseUp={endDraw}
