@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import { startGuessingGame, giveGuess } from "../../socket/selectLobby";
 import { socket } from "../../socket/socket";
+import "../../style/buttons.css";
 
 
 export interface GuessingGame {
@@ -27,7 +28,9 @@ export default function GuessingGameCreator() {
 
     if(!guessingGame){ return (
         <div>
-            <button onClick={joinGuessingGame}>
+            <button 
+             className="btn btn-secondary"
+             onClick={joinGuessingGame}>
                 Starte Rate Spiel
             </button>
         </div>
@@ -43,6 +46,7 @@ export default function GuessingGameCreator() {
             <div>
                 {guessingGame.answerOptions.map((answer: string) => (
                     <button
+                        className="btn btn-secondary"
                         key={answer}
                         onClick={() => guessHandler(answer)}
                         >
