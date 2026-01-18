@@ -1,5 +1,7 @@
 import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
+import "../../style/buttons.css";
+
 
 export default function ShapeMenu() {
   const { tool, setTool, setActiveShape } = useContext(AppContext);
@@ -11,6 +13,7 @@ export default function ShapeMenu() {
 
   return (
     <button
+      className="btn btn-secondary"
       onClick={activateBlob}
       style={{
         padding: "10px",
