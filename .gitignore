@@ -137,5 +137,12 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Paint-by-numbers test output
+backend/Python/test_original.jpg
+backend/Python/test_denoised_colour_reduced.jpg
+backend/Python/test_segmented.jpg
+backend/Python/test_segmented_overlay.jpg
 package-lock.json*
 gitignore
+CLAUDE.md
