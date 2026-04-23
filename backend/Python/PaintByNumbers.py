@@ -3,91 +3,51 @@ import sys
 import cv2
 import numpy as np
 from dataclasses import dataclass
-from typing import List
-from PIL import Image
+from typing import List, Tuple, Dict
 from sklearn.cluster import MiniBatchKMeans
 
-# ---------------------------------------------------------------------------
-# SAM-2 path registration — must happen before any sam2 import
-# ---------------------------------------------------------------------------
-_SAM2_REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "segment-anything-2")
-if _SAM2_REPO not in sys.path:
-    sys.path.insert(0, _SAM2_REPO)
 
+# ---------------------------------------------------------------------------
+# Public preprocessing
+# ---------------------------------------------------------------------------
 
 def denoisePicture(image: np.ndarray) -> np.ndarray:
     """
-    Denoises and smooths an image as a preprocessing step for paint-by-numbers generation.
-
-    Uses a bilateral filter to smooth out texture while preserving edges — edges are
-    important for the segmentation step, so standard Gaussian blur is not ideal here.
-    A second pass with fastNlMeansDenoisingColored removes color noise.
+    Denoises and smooths an image as a preprocessing step for paint-by-numbers
+    generation.  Uses fastNlMeansDenoisingColored to remove colour noise, then
+    a bilateral filter to smooth texture while preserving hard edges.
 
     Args:
         image: BGR image as a NumPy array (as returned by cv2.imread).
 
     Returns:
-        Denoised BGR image as a NumPy array, ready for color reduction and segmentation.
+        Denoised BGR image as a NumPy array.
     """
-    # Remove color noise while preserving edges
     denoised = cv2.fastNlMeansDenoisingColored(
-        image,
-        None,
-        h=10,           # luminance filter strength
-        hColor=10,      # color filter strength
+        image, None,
+        h=10, hColor=10,
         templateWindowSize=7,
         searchWindowSize=21,
     )
-
-    # Bilateral filter: smooths texture but keeps hard edges intact
-    smoothed = cv2.bilateralFilter(
-        denoised,
-        d=9,            # pixel neighbourhood diameter
-        sigmaColor=75,  # range sigma — how much color difference is blended
-        sigmaSpace=75,  # spatial sigma — how far pixels influence each other
-    )
-
-    return smoothed
+    return cv2.bilateralFilter(denoised, d=9, sigmaColor=75, sigmaSpace=75)
 
 
 def reducePictureColour(image: np.ndarray, n_colors: int) -> np.ndarray:
     """
-    Reduces the number of colours in an image using K-Means clustering.
-
-    Flattening the colour palette produces large, coherent regions of uniform colour,
-    which makes it much easier for SAM to produce clean, meaningful segments rather
-    than over-segmenting on subtle texture gradients.
+    Reduces the image to n_colors using K-Means colour quantization.
 
     Args:
-        image:    BGR image as a NumPy array — expected to be the output of denoisePicture.
-        n_colors: Number of colours to keep (i.e. number of K-Means clusters).
-                  Should be driven by the difficulty level of the PBN.
+        image:    BGR image — expected output of denoisePicture.
+        n_colors: Number of palette colours.
 
     Returns:
-        Colour-reduced BGR image as a uint8 NumPy array, same shape as the input.
-        Each pixel is replaced by its nearest cluster centroid colour, ready to be
-        passed to SAM for segmentation.
+        Colour-reduced BGR image where every pixel is its nearest palette colour.
     """
-    h, w = image.shape[:2]
-
-    # SAM expects RGB; convert and work in that space so cluster colours are correct
-    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Reshape to a flat list of pixels for clustering
-    pixels = rgb.reshape(-1, 3).astype(np.float32)
-
-    # MiniBatchKMeans is much faster than KMeans on large images with negligible quality loss
-    kmeans = MiniBatchKMeans(n_clusters=n_colors, random_state=42, n_init=3)
-    labels = kmeans.fit_predict(pixels)
-
-    # Replace every pixel with its centroid colour
-    palette = kmeans.cluster_centers_.astype(np.uint8)
-    reduced_pixels = palette[labels]
-
-    reduced_rgb = reduced_pixels.reshape(h, w, 3)
-
-    # Convert back to BGR so the array stays consistent with the rest of the pipeline
-    return cv2.cvtColor(reduced_rgb, cv2.COLOR_RGB2BGR)
+    label_map, palette = _quantize(image, n_colors)
+    out = np.zeros_like(image)
+    for idx, color in enumerate(palette):
+        out[label_map == idx] = color
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -97,404 +57,367 @@ def reducePictureColour(image: np.ndarray, n_colors: int) -> np.ndarray:
 @dataclass
 class SegmentationResult:
     """
-    Carries everything downstream steps (edge detection, labelling) need.
+    Output of pictureSegmentation, carrying everything downstream steps need.
 
     Attributes:
-        segmented_image:  BGR image where every pixel is filled with the mean
-                          colour of its segment — the classic PBN flat-colour view.
-        label_map:        H×W int32 array; each pixel holds its segment index (0-based).
-        masks:            List of boolean H×W arrays, one per segment.
-        mean_colors:      Parallel list of (B, G, R) uint8 tuples — fill colour per segment.
-        n_segments:       Total number of segments kept after difficulty filtering.
+        segmented_image: BGR image with each pixel filled with its palette colour.
+        label_map:       H×W int32 array; each pixel holds its colour index (0-based).
+        palette:         List of (B, G, R) uint8 tuples, one per colour index.
+        label_locs:      List of {'color_idx', 'x', 'y'} dicts — where to place
+                         each region's number.  Regions of the same colour share a
+                         colour index; each connected region gets its own entry.
+        n_colors:        Number of distinct palette colours used.
     """
     segmented_image: np.ndarray
-    label_map: np.ndarray
-    masks: List[np.ndarray]
-    mean_colors: List[tuple]
-    n_segments: int
+    label_map:       np.ndarray
+    palette:         List[tuple]
+    label_locs:      List[Dict]
+    n_colors:        int
 
 
-def _merge_by_semantics(
-    image: np.ndarray,
-    label_map: np.ndarray,
-    difficulty: int,
-) -> np.ndarray:
+# ---------------------------------------------------------------------------
+# Private helpers  (direct translations of PBNify's processImage.js)
+# ---------------------------------------------------------------------------
+
+def _quantize(image: np.ndarray, n_colors: int) -> Tuple[np.ndarray, List[tuple]]:
     """
-    Merges adjacent segments that depict the same semantic content using CLIP embeddings.
-
-    Each segment is cropped from the image and encoded by CLIP.  Adjacent segments
-    whose cosine similarity exceeds a threshold are merged via Union-Find.  The
-    threshold is lower (more aggressive merging) at easy difficulty and rises as
-    difficulty increases, so:
-      - difficulty 1: loosely related regions merge (all fur patches → one body region)
-      - difficulty 6: only nearly-identical patches merge (fine texture de-duplication)
-      - difficulty 7+: this function is not called at all
-
-    Args:
-        image:      BGR image (colour-reduced).
-        label_map:  H×W int32 label map with contiguous 0-based indices.
-        difficulty: Integer in [1, 6] — controls merge aggressiveness.
+    K-Means colour quantization.
 
     Returns:
-        New label_map with semantically similar adjacent regions merged and
-        labels re-indexed to be contiguous.
+        label_map: H×W int32 array of colour indices.
+        palette:   List of (B, G, R) tuples, one per cluster centroid.
     """
-    import torch
-    from transformers import CLIPProcessor, CLIPModel
+    rgb    = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pixels = rgb.reshape(-1, 3).astype(np.float32)
 
-    # difficulty 1 → 0.80 (merge loosely related), difficulty 6 → 0.93 (nearly identical only)
-    t = (difficulty - 1) / 5.0
-    similarity_threshold = 0.80 + t * 0.13
+    kmeans = MiniBatchKMeans(n_clusters=n_colors, random_state=42, n_init=3)
+    labels = kmeans.fit_predict(pixels)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-    model.eval()
+    label_map    = labels.reshape(image.shape[:2]).astype(np.int32)
+    palette_rgb  = kmeans.cluster_centers_.astype(np.uint8)
+    # Store palette in BGR to match OpenCV convention
+    palette = [tuple(int(c) for c in row[::-1]) for row in palette_rgb]
+    return label_map, palette
 
-    rgb           = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    unique_labels = np.unique(label_map)
-    n             = len(unique_labels)
-    lbl_to_idx    = {lbl: i for i, lbl in enumerate(unique_labels)}
 
-    # --- crop each segment (with padding so CLIP sees context) ---------------
-    crops: List[Image.Image] = []
-    for lbl in unique_labels:
-        ys, xs = np.where(label_map == lbl)
-        pad = 16
-        y1 = max(0,               int(ys.min()) - pad)
-        y2 = min(rgb.shape[0] - 1, int(ys.max()) + pad)
-        x1 = max(0,               int(xs.min()) - pad)
-        x2 = min(rgb.shape[1] - 1, int(xs.max()) + pad)
-        crops.append(Image.fromarray(rgb[y1:y2 + 1, x1:x2 + 1]))
+def _boost_palette_saturation(palette: List[tuple], factor: float = 1.4) -> List[tuple]:
+    """
+    Boosts the saturation of every palette colour in HSV space.
 
-    # --- CLIP embeddings in batches ------------------------------------------
-    batch_size  = 16
-    embeddings_list = []
-    for i in range(0, len(crops), batch_size):
-        inputs = processor(images=crops[i:i + batch_size], return_tensors="pt")
-        pixel_values = inputs["pixel_values"].to(device)
-        with torch.no_grad():
-            feats = model.vision_model(pixel_values=pixel_values).pooler_output
-            feats = feats / feats.norm(dim=-1, keepdim=True)
-        embeddings_list.append(feats.cpu().numpy())
-    embeddings = np.concatenate(embeddings_list, axis=0)   # (N, 512)
+    K-Means cluster centres are averages and tend to be duller than the vivid
+    spots a human would hand-pick (as PBNify does).  A modest saturation
+    multiplier restores the visual contrast of the original.
 
-    # --- find adjacent label pairs from the label_map border pixels ----------
-    h_pairs = np.stack([label_map[:, :-1], label_map[:, 1:]], axis=-1).reshape(-1, 2)
-    v_pairs = np.stack([label_map[:-1, :], label_map[1:, :]], axis=-1).reshape(-1, 2)
-    all_pairs = np.concatenate([h_pairs, v_pairs], axis=0)
-    all_pairs = all_pairs[all_pairs[:, 0] != all_pairs[:, 1]]          # remove self-pairs
-    all_pairs = np.sort(all_pairs, axis=1)                              # canonical order
-    all_pairs = np.unique(all_pairs, axis=0)
+    Args:
+        palette: List of (B, G, R) uint8 tuples.
+        factor:  Saturation multiplier (1.0 = no change, 1.4 = 40% boost).
 
-    # --- Union-Find merge ----------------------------------------------------
-    parent = list(range(n))
+    Returns:
+        New palette with boosted saturation, same structure as input.
+    """
+    result = []
+    for bgr in palette:
+        arr = np.array([[list(bgr)]], dtype=np.uint8)
+        hsv = cv2.cvtColor(arr, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[0, 0, 1] = min(255.0, hsv[0, 0, 1] * factor)
+        boosted = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        result.append(tuple(int(c) for c in boosted[0, 0]))
+    return result
 
-    def find(x: int) -> int:
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
 
-    def union(x: int, y: int) -> None:
-        parent[find(x)] = find(y)
+def _smooth_label_map(label_map: np.ndarray, n_colors: int, radius: int) -> np.ndarray:
+    """
+    Mode filter: replaces each pixel's colour index with the most common index
+    in a (2*radius+1) × (2*radius+1) neighbourhood.
 
-    for lbl_a, lbl_b in all_pairs:
-        i, j = lbl_to_idx[lbl_a], lbl_to_idx[lbl_b]
-        if find(i) == find(j):
+    Equivalent to PBNify's smooth() / getVicinVal() with range=radius.
+    Uses per-colour box filters for efficiency instead of per-pixel histograms.
+    """
+    size   = 2 * radius + 1
+    h, w   = label_map.shape
+    counts = np.zeros((n_colors, h, w), dtype=np.float32)
+
+    for c in range(n_colors):
+        binary    = (label_map == c).astype(np.float32)
+        counts[c] = cv2.boxFilter(binary, -1, (size, size), normalize=False)
+
+    return np.argmax(counts, axis=0).astype(np.int32)
+
+
+def _remove_small_regions(
+    label_map: np.ndarray, n_colors: int, min_size: int
+) -> np.ndarray:
+    """
+    Finds connected regions of the same colour via flood-fill and merges any
+    region with fewer than min_size pixels into the colour of the pixel
+    directly above its topmost pixel (or below, if the region touches the top
+    edge).
+
+    Equivalent to PBNify's removeRegion() called inside getLabelLocs().
+    Repeats up to 5 passes so that cascading merges are resolved.
+    """
+    label_map = label_map.copy()
+    h         = label_map.shape[0]
+
+    for _ in range(5):
+        changed = False
+        for color_idx in range(n_colors):
+            binary = (label_map == color_idx).astype(np.uint8)
+            if binary.sum() == 0:
+                continue
+
+            n_comp, comp_map, stats, _ = cv2.connectedComponentsWithStats(
+                binary, connectivity=4
+            )
+            for comp_idx in range(1, n_comp):
+                if stats[comp_idx, cv2.CC_STAT_AREA] >= min_size:
+                    continue
+
+                mask  = comp_map == comp_idx
+                ys, xs = np.where(mask)
+                top_y  = int(ys.min())
+                top_x  = int(xs[ys == top_y][0])
+
+                if top_y > 0:
+                    new_color = int(label_map[top_y - 1, top_x])
+                else:
+                    bottom_y  = int(ys.max())
+                    new_color = int(label_map[min(bottom_y + 1, h - 1), top_x])
+
+                label_map[mask] = new_color
+                changed = True
+
+        if not changed:
+            break
+
+    return label_map
+
+
+def _compute_run_lengths(
+    label_map: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    For every pixel, counts how many consecutive same-colour pixels exist in
+    each of the four cardinal directions (not counting the pixel itself).
+
+    Equivalent to PBNify's sameCount() applied in bulk.
+    Returns (run_right, run_left, run_down, run_up) — all H×W int32 arrays.
+    """
+    h, w      = label_map.shape
+    run_right = np.zeros((h, w), dtype=np.int32)
+    run_left  = np.zeros((h, w), dtype=np.int32)
+    run_down  = np.zeros((h, w), dtype=np.int32)
+    run_up    = np.zeros((h, w), dtype=np.int32)
+
+    for x in range(w - 2, -1, -1):                                # right → left
+        same         = label_map[:, x] == label_map[:, x + 1]
+        run_right[:, x] = np.where(same, run_right[:, x + 1] + 1, 0)
+
+    for x in range(1, w):                                          # left → right
+        same        = label_map[:, x] == label_map[:, x - 1]
+        run_left[:, x] = np.where(same, run_left[:, x - 1] + 1, 0)
+
+    for y in range(h - 2, -1, -1):                                # bottom → top
+        same        = label_map[y, :] == label_map[y + 1, :]
+        run_down[y, :] = np.where(same, run_down[y + 1, :] + 1, 0)
+
+    for y in range(1, h):                                          # top → bottom
+        same      = label_map[y, :] == label_map[y - 1, :]
+        run_up[y, :] = np.where(same, run_up[y - 1, :] + 1, 0)
+
+    return run_right, run_left, run_down, run_up
+
+
+def _get_label_locs(
+    label_map: np.ndarray, n_colors: int, min_size: int
+) -> List[Dict]:
+    """
+    For every connected region with area >= min_size, finds the pixel whose
+    "goodness" score (product of run lengths in all four directions) is highest.
+    That pixel is the most interior point of the region — the best place for a
+    number label.
+
+    Equivalent to PBNify's getLabelLoc() / getLabelLocs().
+    Returns a list of {'color_idx': int, 'x': int, 'y': int}.
+    Multiple entries may share the same color_idx (one per connected region).
+    """
+    run_right, run_left, run_down, run_up = _compute_run_lengths(label_map)
+    # int64 to avoid overflow when multiplying four potentially large counts
+    goodness = (
+        run_right.astype(np.int64)
+        * run_left
+        * run_down
+        * run_up
+    )
+
+    label_locs: List[Dict] = []
+    for color_idx in range(n_colors):
+        binary = (label_map == color_idx).astype(np.uint8)
+        if binary.sum() == 0:
             continue
-        sim = float(np.dot(embeddings[i], embeddings[j]))
-        if sim >= similarity_threshold:
-            union(i, j)
 
-    # --- rebuild and re-index label_map --------------------------------------
-    component_to_new: dict = {}
-    counter = 0
-    new_label_map = np.zeros_like(label_map)
-    for i, lbl in enumerate(unique_labels):
-        comp = find(i)
-        if comp not in component_to_new:
-            component_to_new[comp] = counter
-            counter += 1
-        new_label_map[label_map == lbl] = component_to_new[comp]
+        n_comp, comp_map, stats, _ = cv2.connectedComponentsWithStats(
+            binary, connectivity=4
+        )
+        for comp_idx in range(1, n_comp):
+            if stats[comp_idx, cv2.CC_STAT_AREA] < min_size:
+                continue
 
-    return new_label_map
+            region_mask     = comp_map == comp_idx
+            region_goodness = np.where(region_mask, goodness, 0)
+            if int(region_goodness.max()) > 0:
+                best_flat      = int(np.argmax(region_goodness))
+                best_y, best_x = np.unravel_index(best_flat, label_map.shape)
+            else:
+                # Thin sliver — goodness is 0 everywhere; fall back to centroid
+                ys_r, xs_r = np.where(region_mask)
+                best_y     = int(np.mean(ys_r))
+                best_x     = int(np.mean(xs_r))
 
+            label_locs.append({
+                'color_idx': color_idx,
+                'x': int(best_x),
+                'y': int(best_y),
+            })
+
+    return label_locs
+
+
+# ---------------------------------------------------------------------------
+# Public pipeline functions
+# ---------------------------------------------------------------------------
 
 def pictureSegmentation(image: np.ndarray, difficulty: int) -> SegmentationResult:
     """
-    Segments a pre-processed image with SAM-2 to produce a paint-by-numbers layout.
+    Converts a denoised image into a paint-by-numbers layout without any neural
+    network — purely through colour quantization, smoothing, and region analysis.
 
-    difficulty controls both how many segments are produced and how large they must
-    be to survive:
-      - 1  (easy)   →  5 large regions,  small fragments merged away
-      - 10 (hard)   → 30 fine regions,   smaller fragments kept
-
-    Rather than simply slicing the top-N SAM masks (which overlap and leave gaps),
-    we build the label_map by iterating all SAM masks largest-first and stamping
-    only unclaimed pixels.  The final number of segments is therefore exactly the
-    number of distinct labels in the map — no gaps, no overlaps.
+    This mirrors the PBNify pipeline:
+      1. K-Means quantization to a difficulty-scaled palette
+      2. Mode-filter smoothing to eliminate texture noise
+      3. Small-region merging (flood-fill, absorb fragments below min_size)
+      4. Goodness-metric label placement per connected region
 
     Args:
-        image:      BGR image — expected output of reducePictureColour.
-        difficulty: Integer in [1, 10] controlling segment count and granularity.
+        image:      BGR image — expected output of denoisePicture.
+        difficulty: Integer in [1, 10].
+                    1 = very few bold regions (easy to paint)
+                    10 = many fine regions (detailed, harder to paint)
 
     Returns:
-        SegmentationResult with the flat-colour image, per-pixel label map, masks,
-        mean colours, and the final segment count — ready for edge detection and
-        number labelling.
+        SegmentationResult ready for buildContours and labelSegments.
     """
-    import torch
-    from sam2.build_sam import build_sam2
-    from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
-
-    h, w = image.shape[:2]
-    total_pixels = h * w
-
-    # --- difficulty → SAM parameters -----------------------------------------
-    # points_per_side: more points → denser sampling → more candidate masks
-    # difficulty 1 → 8 pts/side, difficulty 10 → 32 pts/side
     t = (difficulty - 1) / 9.0
-    points_per_side = int(8 + t * 24)
 
-    # min_mask_region_area: discard masks smaller than this (as % of image).
-    # Easy = only large blobs survive; hard = small details kept.
-    min_area_frac_easy, min_area_frac_hard = 0.02, 0.002
-    min_mask_region_area = int(total_pixels * (min_area_frac_easy + t * (min_area_frac_hard - min_area_frac_easy)))
+    # Difficulty → palette size: 1 → 4 colours, 10 → 24 colours
+    n_colors = int(round(4 + t * 20))
 
-    # pred_iou_thresh: lower = accept more (noisier) masks at high difficulty
-    pred_iou_thresh = 0.88 - t * 0.12   # 0.88 (easy) → 0.76 (hard)
+    # Difficulty → smoothing radius: 1 → 8 px, 10 → 2 px; two passes for easier levels
+    smooth_radius = int(round(8 - t * 6))
+    smooth_passes = 2 if t < 0.5 else 1
 
-    # --- SAM-2 setup ---------------------------------------------------------
-    checkpoint = os.path.join(_SAM2_REPO, "checkpoints", "sam2.1_hiera_small.pt")
-    config     = "configs/sam2.1/sam2.1_hiera_s.yaml"
-    device     = "cuda" if torch.cuda.is_available() else "cpu"
+    # Difficulty → minimum region size (% of total pixels): 1 → 0.5%, 10 → 0.05%
+    h, w     = image.shape[:2]
+    min_frac = 0.005 - t * 0.0045
+    min_size = max(int(h * w * min_frac), 100)
 
-    original_cwd = os.getcwd()
-    os.chdir(_SAM2_REPO)
-    try:
-        sam_model = build_sam2(config, checkpoint, device=device)
-    finally:
-        os.chdir(original_cwd)
+    # Pre-blur suppresses texture (fur, trees) before quantization so that nearby
+    # similarly-coloured pixels cluster together instead of forming spikey fragments.
+    # More blur at easier difficulties; minimal at the hardest.
+    blur_sigma = max(1.0, 5.0 - t * 4.0)        # 5 → 1
+    blurred    = cv2.GaussianBlur(image, (0, 0), blur_sigma)
 
-    generator = SAM2AutomaticMaskGenerator(
-        model=sam_model,
-        points_per_side=points_per_side,
-        pred_iou_thresh=pred_iou_thresh,
-        stability_score_thresh=0.90,
-        min_mask_region_area=min_mask_region_area,
-    )
+    label_map, palette = _quantize(blurred, n_colors)
+    palette = _boost_palette_saturation(palette)
+    for _ in range(smooth_passes):
+        label_map = _smooth_label_map(label_map, n_colors, smooth_radius)
+    label_map = _remove_small_regions(label_map, n_colors, min_size)
+    label_locs = _get_label_locs(label_map, n_colors, min_size)
 
-    # SAM expects RGB uint8
-    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    all_masks_data = generator.generate(rgb)
-
-    # --- build label_map: stamp largest masks first, never overwrite ---------
-    all_masks_data.sort(key=lambda m: m["area"], reverse=True)
-
-    label_map = np.full((h, w), fill_value=-1, dtype=np.int32)
-    accepted_masks: List[np.ndarray] = []
-
-    for mask_data in all_masks_data:
-        binary_mask: np.ndarray = mask_data["segmentation"]  # bool H×W
-        unclaimed = binary_mask & (label_map == -1)
-        if unclaimed.sum() == 0:
-            continue
-        idx = len(accepted_masks)
-        label_map[unclaimed] = idx
-        accepted_masks.append(binary_mask)
-
-    # --- assign any still-unclaimed pixels to the nearest segment by colour --
-    unassigned = np.where(label_map == -1)
-    if unassigned[0].size > 0 and accepted_masks:
-        segment_colors = np.array([
-            image[accepted_masks[i]].mean(axis=0) for i in range(len(accepted_masks))
-        ], dtype=np.float32)
-        pixel_colors = image[unassigned].astype(np.float32)
-        diffs   = pixel_colors[:, None, :] - segment_colors[None, :, :]
-        nearest = np.argmin((diffs ** 2).sum(axis=2), axis=1)
-        label_map[unassigned] = nearest
-
-    # --- merge fragments that are too small to label -------------------------
-    # Minimum labelable area: a square whose side holds the widest 2-digit number
-    # at the smallest font scale used by labelSegments (0.2).  In practice ~20×10 px.
-    # Scale the threshold with difficulty so easy runs are more aggressively merged.
-    min_label_px = int(total_pixels * (0.005 - t * 0.004))   # 0.5% (easy) → 0.1% (hard)
-    min_label_px = max(min_label_px, 400)                     # hard floor: 400 px
-
-    # Repeat until no more fragments exist — one pass can expose new ones.
-    for _ in range(10):
-        merged_any = False
-        unique_labels = np.unique(label_map)
-
-        for lbl in unique_labels:
-            region = label_map == lbl
-            if region.sum() >= min_label_px:
-                continue
-
-            # Dilate the fragment by 1 px to find touching neighbours
-            kernel    = np.ones((3, 3), np.uint8)
-            dilated   = cv2.dilate(region.astype(np.uint8), kernel, iterations=1).astype(bool)
-            neighbour_mask = dilated & ~region
-            neighbour_labels = label_map[neighbour_mask]
-            neighbour_labels = neighbour_labels[neighbour_labels != lbl]
-
-            if neighbour_labels.size == 0:
-                continue
-
-            # Absorb into the most-touching neighbour
-            counts     = np.bincount(neighbour_labels)
-            best_label = int(np.argmax(counts))
-            label_map[region] = best_label
-            merged_any = True
-
-        if not merged_any:
-            break
-
-    # --- re-index labels to be contiguous after merging ----------------------
-    unique_labels = np.unique(label_map)
-    remap = {old: new for new, old in enumerate(unique_labels)}
-    new_label_map = np.zeros_like(label_map)
-    for old, new in remap.items():
-        new_label_map[label_map == old] = new
-    label_map = new_label_map
-
-    # --- semantic merging via CLIP (easy/medium difficulty only) -------------
-    # For difficulty < 7 we use CLIP to understand image content and merge
-    # segments that depict the same semantic "thing" (e.g. all fur patches on a
-    # cat, or all foliage patches on a tree) into one coherent region.
-    if difficulty < 7:
-        label_map = _merge_by_semantics(image, label_map, difficulty)
-
-    # --- compute per-segment mean colour and build the flat output image -----
-    n = len(np.unique(label_map))
     segmented_image = np.zeros_like(image)
-    mean_colors: List[tuple] = []
-    final_masks: List[np.ndarray] = []
-
-    for idx in range(n):
-        region = label_map == idx
-        region_pixels = image[region]
-        mean_color = (128, 128, 128) if region_pixels.size == 0 else \
-                     tuple(int(c) for c in region_pixels.mean(axis=0))
-        mean_colors.append(mean_color)
-        segmented_image[region] = mean_color
-        final_masks.append(region)
+    for idx, color in enumerate(palette):
+        segmented_image[label_map == idx] = color
 
     return SegmentationResult(
         segmented_image=segmented_image,
         label_map=label_map,
-        masks=final_masks,
-        mean_colors=mean_colors,
-        n_segments=n,
+        palette=palette,
+        label_locs=label_locs,
+        n_colors=n_colors,
     )
 
 
 def buildContours(segmentation: SegmentationResult) -> np.ndarray:
     """
-    Draws black outlines around every segment onto the flat-colour segmented image.
+    Produces a white canvas with black outlines wherever adjacent pixels belong
+    to different colour regions.
+
+    Checks only the right and bottom neighbours of each pixel, identical to
+    PBNify's outline() / neighborsSame() approach.
 
     Args:
-        segmentation: The SegmentationResult returned by pictureSegmentation.
+        segmentation: Output of pictureSegmentation.
 
     Returns:
-        A copy of segmentation.segmented_image with 1-pixel black contour lines
-        drawn along every segment boundary, ready to be passed to labelSegments.
+        White BGR image with black 1-pixel boundary lines.
     """
-    canvas = segmentation.segmented_image.copy()
+    lm  = segmentation.label_map
+    h, w = lm.shape
 
-    for idx in range(segmentation.n_segments):
-        mask_uint8 = (segmentation.label_map == idx).astype(np.uint8) * 255
-        contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(canvas, contours, -1, (0, 0, 0), 1)
+    edges = np.zeros((h, w), dtype=bool)
+    edges[:, :-1] |= lm[:, :-1] != lm[:, 1:]   # right neighbour differs
+    edges[:-1, :] |= lm[:-1, :] != lm[1:, :]   # bottom neighbour differs
 
+    canvas         = np.full((h, w, 3), 255, dtype=np.uint8)
+    canvas[edges]  = (0, 0, 0)
     return canvas
 
 
 def labelSegments(contour_image: np.ndarray, segmentation: SegmentationResult) -> np.ndarray:
     """
-    Places a number at the visual centre of each segment identifying its colour index.
+    Draws a number at the most interior point of every colour region.
 
-    Font size scales with the segment's bounding-box so labels are always readable
-    and never overflow their region.  Segments too small to fit even the minimum
-    font size are skipped.
+    The number is the 1-based colour index, matching PBNify's convention:
+    all regions painted with colour 3 are labelled "3".
 
     Args:
-        contour_image: The BGR image returned by buildContours.
-        segmentation:  The SegmentationResult returned by pictureSegmentation.
+        contour_image: White-with-outlines image from buildContours.
+        segmentation:  Output of pictureSegmentation.
 
     Returns:
-        The contour image with numbers drawn onto it — the finished PBN sheet.
+        The contour image with numbers placed at each region's best interior point.
     """
     canvas    = contour_image.copy()
     font      = cv2.FONT_HERSHEY_SIMPLEX
-    thickness = 1
+    font_scale = 0.3
+    thickness  = 1
+    color      = (80, 80, 80)   # dark grey, matches PBNify's adjustable darkness
 
-    for idx in range(segmentation.n_segments):
-        mask_bool  = segmentation.label_map == idx
-        mask_uint8 = mask_bool.astype(np.uint8) * 255
-
-        moments = cv2.moments(mask_uint8)
-        if moments["m00"] == 0:
-            continue
-
-        cx = int(moments["m10"] / moments["m00"])
-        cy = int(moments["m01"] / moments["m00"])
-
-        # Snap centroid into the region for concave/crescent shapes
-        if not mask_bool[cy, cx]:
-            ys, xs = np.where(mask_bool)
-            nearest = np.argmin((xs - cx) ** 2 + (ys - cy) ** 2)
-            cx, cy  = int(xs[nearest]), int(ys[nearest])
-
-        # Estimate available space from the segment's bounding box
-        ys, xs     = np.where(mask_bool)
-        region_w   = int(xs.max() - xs.min())
-        region_h   = int(ys.max() - ys.min())
-        available  = min(region_w, region_h)
-
-        label = str(idx + 1)
-
-        # Binary-search a font scale that fits inside the available space
-        lo, hi     = 0.2, 2.0
-        font_scale = lo
-        for _ in range(8):
-            mid = (lo + hi) / 2
-            (tw, th), _ = cv2.getTextSize(label, font, mid, thickness)
-            if tw < available * 0.8 and th < available * 0.8:
-                font_scale = mid
-                lo = mid
-            else:
-                hi = mid
-
-        # Skip segments where even the minimum scale doesn't fit
-        (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
-        if tw >= available or th >= available:
-            continue
-
-        # Black or white text depending on fill brightness
-        b, g, r    = segmentation.mean_colors[idx]
-        brightness = 0.299 * r + 0.587 * g + 0.114 * b
-        text_color = (0, 0, 0) if brightness > 128 else (255, 255, 255)
-
-        origin = (cx - tw // 2, cy + th // 2)
-        cv2.putText(canvas, label, origin, font, font_scale, text_color, thickness, cv2.LINE_AA)
+    for loc in segmentation.label_locs:
+        label        = str(loc['color_idx'] + 1)
+        x, y         = loc['x'], loc['y']
+        (tw, th), _  = cv2.getTextSize(label, font, font_scale, thickness)
+        origin       = (x - tw // 2, y + th // 2)
+        cv2.putText(canvas, label, origin, font, font_scale, color, thickness, cv2.LINE_AA)
 
     return canvas
 
 
+# ---------------------------------------------------------------------------
+# Test pipeline
+# ---------------------------------------------------------------------------
+
 def testPipeline(image_path: str, difficulty: int = 5) -> None:
     """
-    Runs the full pipeline: denoise → colour reduce → SAM-2 segmentation.
-    Saves four JPGs to the /Python folder:
+    Runs the full pipeline and saves three output JPGs to the /Python folder:
       - test_original.jpg
-      - test_denoised_colour_reduced.jpg
-      - test_segmented.jpg        (flat-colour PBN view)
-      - test_segmented_overlay.jpg (segments outlined on the original)
+      - test_segmented.jpg          (flat-colour regions)
+      - test_segmented_contours.jpg (white canvas with outlines)
+      - test_paint_by_numbers.jpg   (outlines + numbers)
 
     Args:
         image_path: Path to the input image.
-        difficulty: PBN difficulty in [1, 10] passed to pictureSegmentation.
+        difficulty: PBN difficulty in [1, 10].
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -502,41 +425,37 @@ def testPipeline(image_path: str, difficulty: int = 5) -> None:
     if original is None:
         raise FileNotFoundError(f"Could not load image: {image_path}")
 
-    print("Step 1/4 — denoising...")
+    print("Step 1/3 — denoising...")
     denoised = denoisePicture(original)
 
-    # difficulty 1 → 4 colours, difficulty 10 → 24 colours
-    n_colors = int(4 + (difficulty - 1) / 9 * 20)
-    print(f"Step 2/4 — colour reduction ({n_colors} colours)...")
-    colour_reduced = reducePictureColour(denoised, n_colors)
+    print(f"Step 2/3 — quantize + smooth + segment (difficulty={difficulty})...")
+    result = pictureSegmentation(denoised, difficulty)
 
-    print(f"Step 3/4 — SAM-2 segmentation (difficulty={difficulty})...")
-    result = pictureSegmentation(colour_reduced, difficulty)
-
-    print("Step 4/4 — contours + labels...")
+    print("Step 3/3 — contours + labels...")
     with_contours = buildContours(result)
     finished      = labelSegments(with_contours, result)
 
     paths = {
-        "test_original.jpg":                original,
-        "test_denoised_colour_reduced.jpg": colour_reduced,
-        "test_segmented.jpg":               result.segmented_image,
-        "test_segmented_contours.jpg":      with_contours,
-        "test_paint_by_numbers.jpg":        finished,
+        "test_original.jpg":             original,
+        "test_segmented.jpg":            result.segmented_image,
+        "test_segmented_contours.jpg":   with_contours,
+        "test_paint_by_numbers.jpg":     finished,
     }
     for filename, img in paths.items():
         out_path = os.path.join(script_dir, filename)
         cv2.imwrite(out_path, img)
         print(f"Saved: {out_path}")
 
-    print(f"\nOriginal size:    {original.shape}")
-    print(f"Segments kept:    {result.n_segments}  (target for difficulty {difficulty})")
-    print(f"Unique colours (colour-reduced): {len(set(map(tuple, colour_reduced.reshape(-1, 3))))}")
+    print(f"\nImage size:     {original.shape[:2]}")
+    print(f"Palette size:   {result.n_colors} colours")
+    print(f"Labelled regions: {len(result.label_locs)}")
 
-def main():
-    difficulty = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+
+def main() -> None:
     image_path = sys.argv[1] if len(sys.argv) > 1 else "gadse.jpg"
+    difficulty = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     testPipeline(image_path, difficulty)
+
 
 if __name__ == "__main__":
     main()
