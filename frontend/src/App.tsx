@@ -3,9 +3,12 @@ import './App.css'
 import Prompts from './components/canvas/Prompts';
 import Canvas from "./components/canvas/Canvas";
 import ColorPicker from './components/toolbar/ColorPicker';
+import ShapeButton from './components/toolbar/ShapeButton';
+import PenButton from './components/toolbar/PenButton';
 import LobbySelector from './components/canvas/LobbySelector';
 import { twoKeyControls } from './input/twoKeyControls';
 import GuessingGameCreator from './components/canvas/GuessingGame';
+import MirrorButton from './components/canvas/MirrorSelector';
 import ToolBar from './components/toolbar/Toolbar';
 import { AppContext } from "./context/AppContext";
 
@@ -19,6 +22,16 @@ function App() {
   twoKeyControls();
 
   return (
+    <div>
+      {/*<ColorPicker />*/}
+      <Prompts />
+      <LobbySelector />
+      
+      
+      
+      <GuessingGameCreator/>
+      <MirrorButton />
+      
     <div style={{
       display: 'flex',
       flexDirection: 'column',
@@ -43,11 +56,11 @@ function App() {
         zIndex: 10,
         flexWrap: 'wrap'
       }}>
-        <LobbySelector />
-        <Prompts />
+        { /*<LobbySelector />*/ }
+       {/*<Prompts />}
         {/* Trenner */}
         <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
-        <GuessingGameCreator />
+        { /*<GuessingGameCreator /> */}
       </div>
 
       {/* 2. MITTLERE REIHE */}
@@ -202,6 +215,8 @@ function App() {
 
       {/* 3. BOTTOM-BAR — kann leer bleiben oder für spätere Infos genutzt werden */}
       
+
+    </div>
 
     </div>
   )

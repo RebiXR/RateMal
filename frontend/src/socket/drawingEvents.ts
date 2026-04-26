@@ -41,6 +41,7 @@ export type DrawEvent = lineDrawEvent | ShapeDrawEvent;
 type DrawPayload = {
   lobbyId: string;
   data: DrawEvent;
+  canvasWidth?: number;
 }
 
 /**

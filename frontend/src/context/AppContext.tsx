@@ -24,6 +24,8 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   //const [currentPrompt, setCurrentPrompt] = useState("Zeichne etwas Einfaches");
   const [activeLobbyId, setActiveLobbyId] = useState<string | null>(null)
   const [tool, setTool] = useState<"pen" | "shape">("pen");
+  //const [activeShape, setActiveShape] = useState<"blob" | null>(null);
+  const [mirrorMode, setMirrorMode] = useState(false);
   const [activeShape, setActiveShape] = useState<string | null>(null);
   //--------------------------------
   // this is the group prompt:
@@ -92,6 +94,8 @@ const requestGroupPrompt = () => {
       activeShape,
       setActiveShape,
       guessingGame,
+      mirrorMode,
+      setMirrorMode,
       stickerSize,
       setStickerSize,
       penWidth,

@@ -149,7 +149,7 @@ export default function Canvas() {
       };
       
       renderEvent(ctx, eventData);
-      emitDraw({ lobbyId: activeLobbyId, data: eventData });
+      emitDraw({ lobbyId: activeLobbyId, canvasWidth: canvasRef.current!.width, data: eventData });
       return;
     }
 
@@ -175,7 +175,7 @@ export default function Canvas() {
     };
 
     renderEvent(ctx, eventData);
-    emitDraw({ lobbyId: activeLobbyId, data: eventData });
+    emitDraw({ lobbyId: activeLobbyId, canvasWidth: canvasRef.current!.width, data: eventData });
     lastPoint.current = p;
   };
 

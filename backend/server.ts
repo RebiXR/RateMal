@@ -4,6 +4,9 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { lobbies, Lobby } from "./lobby.ts"
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
+import { DrawEvent } from "./DrawEvents.ts";
+import { mirrorDrawEvent } from "./MirrorDraw.ts";
+
 
 const app = express();
 app.use(cors());
@@ -20,8 +23,7 @@ const io = new Server(httpServer, {
 });
 
 // not nomalized 
-type PointN = { x: number; y: number }; // normalized 0..1
-
+/**type PointN = { x: number; y: number }; // normalized 0..1
 
 type LineDrawEvent ={
   type:"line";
@@ -35,22 +37,18 @@ type LineDrawEvent ={
   x: number;
   y:number;
   color:string;
+};
 };*/
 
-type ShapeDrawEvent ={
-  type:"shape";
-  shapeType: string;
-  x: number;
-  y:number;
-  color:string;
-};
 
 
-
-type DrawEvent = LineDrawEvent| ShapeDrawEvent;
+//type DrawEvent = LineDrawEvent| ShapeDrawEvent;
 
 // Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
 const lobbyHistory = new Map<string, DrawEvent[]>();
+
+// for mirrored drawing option
+const lobbyMirrorMode = new Map<string, boolean>();
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
@@ -70,33 +68,40 @@ io.on("connection", (socket) => {
     socket.to(lobbyId).emit("User connected", userId)
   });
 
-  socket.on("draw", ({ lobbyId, data }: { lobbyId: string; data: DrawEvent }) => {
+  socket.on("draw", ({ lobbyId, data, canvasWidth }: { lobbyId: string; data: DrawEvent; canvasWidth?:number }) => {
     if (!lobbyId) return;
 
     // speichern für spätere Joiner
     const hist = lobbyHistory.get(lobbyId) ?? [];
+
+// for mirrored option:
+    const mirrorMode = lobbyMirrorMode.get(lobbyId) ?? false; // false by default if nothing is picked
+
+    if (mirrorMode && canvasWidth) {
+    const mirrored = mirrorDrawEvent(data, canvasWidth);
+
+    hist.push(data, mirrored);
+    lobbyHistory.set(lobbyId, hist);
+
+    socket.to(lobbyId).emit("draw", data);
+    socket.to(lobbyId).emit("draw", mirrored);
+
+    socket.emit("draw", mirrored);
+    }else {    
     hist.push(data);
 
     // optional: begrenzen, damit RAM nicht unendlich wächst
     // if (hist.length > 50_000) hist.splice(0, hist.length - 50_000);
-
     lobbyHistory.set(lobbyId, hist);
 
     socket.to(lobbyId).emit("draw", data)
+  }
   })
 
 
   //-------------------------------------
   //for the group: 
-  //mit lobby ?????????
-  // Fix für  GroupPrompt (Lobby Specific)
-  // :
-  /*socket.on("newGroupPrompt", (lobbyId: string) => {
-    const randomPrompt = "..."; 
-    // Sende es nur an die Leute in der Lobby!
-    io.to(lobbyId).emit("groupPrompt", randomPrompt); 
-  });*/
-  //-------------------------------------
+
 
   socket.on("newGroupPrompt", () => {
     const randomPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)] + " im Stil: " + drawingStyle[Math.floor(Math.random()*drawingStyle.length)]);
@@ -147,6 +152,13 @@ io.on("connection", (socket) => {
       
     })
   })
+
+  socket.on("toggleMirrorMode", (lobbyId: string) => {
+  const next = !(lobbyMirrorMode.get(lobbyId) ?? false);
+  lobbyMirrorMode.set(lobbyId, next);
+
+  io.to(lobbyId).emit("mirrorModeChanged", next);
+});
 
 
 });
