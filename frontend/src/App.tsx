@@ -8,6 +8,7 @@ import { twoKeyControls } from './input/twoKeyControls';
 import ShapeButton from './components/toolbar/ShapeButton';
 import PenButton from './components/toolbar/PenButton';
 import GuessingGameCreator from './components/canvas/GuessingGame';
+import MirrorButton from './components/canvas/MirrorSelector';
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
       <ShapeButton/>
       <PenButton/>
       <GuessingGameCreator/>
+      <MirrorButton />
     </div>
   )
 }

@@ -22,8 +22,6 @@ export default function Canvas() {
   const isDrawing = useRef(false);
   const lastPoint = useRef<Point | null>(null);
 
-
-
   //result= positon relativ to canvas
   const getPos = (e: MouseEvent | TouchEvent): Point => {
     const canvas = canvasRef.current!;
@@ -136,9 +134,9 @@ export default function Canvas() {
   // SHAPE-MODUS
   if (tool === "shape" && activeShape === "blob") {
     drawBlob(p.x, p.y, currentColor);
-
     emitDraw({
       lobbyId: activeLobbyId,
+      canvasWidth: canvasRef.current!.width,
       data: {
         type: "blob",
         x: p.x,
@@ -173,9 +171,11 @@ export default function Canvas() {
     ctx.lineTo(p.x, p.y);
     ctx.stroke(); // needed for visivle line
 
+    
     // minimal info that is sent over socket- functino call socket 
     emitDraw({
       lobbyId: activeLobbyId,
+      canvasWidth: canvasRef.current!.width,
       data: {
         type: "line",
         from: lastPoint.current,
@@ -211,12 +211,11 @@ export default function Canvas() {
     canvas.height = window.innerHeight;
 
     onDraw((data) => {
-
-
       if (data.type === "blob") {
         drawBlob(data.x, data.y, data.color);
       return;
   }
+
 
       ctx.strokeStyle = data.color;
       ctx.lineWidth = 4;
