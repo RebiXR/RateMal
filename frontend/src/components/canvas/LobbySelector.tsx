@@ -1,6 +1,7 @@
 import { useEffect, useContext, useState } from "react";
 import { AppContext } from "../../context/AppContext";
 import { requestLobbies, onLobbyList, joinLobby } from "../../socket/selectLobby";
+import "../../style/buttons.css";
 
 export default function LobbySelector() {
   const { setActiveLobbyId, activeLobbyId } = useContext(AppContext);
@@ -28,6 +29,7 @@ export default function LobbySelector() {
       {lobbies.length === 0 && <p>Loading lobbies...</p>}
       {lobbies.map((id) => (
         <button
+          className="btn btn-secondary"
           key={id}
           onClick={() => handleJoinLobby(id)}
           disabled={activeLobbyId === id}
