@@ -32,16 +32,17 @@ type LineDrawEvent ={
   color:string;
   width:number;
 };
-type BlobDrawEvent ={
+/*type BlobDrawEvent ={
   type:"blob";
   x: number;
   y:number;
   color:string;
 };
+};*/
 
-type DrawEvent = LineDrawEvent| BlobDrawEvent;
-**/
 
+
+//type DrawEvent = LineDrawEvent| ShapeDrawEvent;
 
 // Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
 const lobbyHistory = new Map<string, DrawEvent[]>();
@@ -97,7 +98,11 @@ io.on("connection", (socket) => {
   }
   })
 
+
+  //-------------------------------------
   //for the group: 
+
+
   socket.on("newGroupPrompt", () => {
     const randomPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)] + " im Stil: " + drawingStyle[Math.floor(Math.random()*drawingStyle.length)]);
   

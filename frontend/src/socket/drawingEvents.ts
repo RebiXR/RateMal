@@ -22,18 +22,20 @@ type lineDrawEvent = {
 /**
  * Draw event for shape placement.
  */
-type BlobDrawEvent = {
-  type: "blob"
+type ShapeDrawEvent = {
+  type: "shape"
+  shapeType: string;
   x: number;
   y: number;
   color: string;
+  size?: number;
 };
 
 /**
  * Union type represents all possible draw events
  * to distinguish from stroke and shape
  */
-export type DrawEvent = lineDrawEvent |BlobDrawEvent;
+export type DrawEvent = lineDrawEvent | ShapeDrawEvent;
 
 
 type DrawPayload = {

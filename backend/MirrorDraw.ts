@@ -24,7 +24,7 @@ export function mirrorDrawEvent(
     };
   }
 
-  if (data.type === "blob") {
+  if (data.type === "shape") {
     return {
       ...data,
       x: mirrorX(data.x, canvasWidth),

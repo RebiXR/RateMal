@@ -24,13 +24,17 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   //const [currentPrompt, setCurrentPrompt] = useState("Zeichne etwas Einfaches");
   const [activeLobbyId, setActiveLobbyId] = useState<string | null>(null)
   const [tool, setTool] = useState<"pen" | "shape">("pen");
-  const [activeShape, setActiveShape] = useState<"blob" | null>(null);
+  //const [activeShape, setActiveShape] = useState<"blob" | null>(null);
   const [mirrorMode, setMirrorMode] = useState(false);
+  const [activeShape, setActiveShape] = useState<string | null>(null);
   //--------------------------------
   // this is the group prompt:
   const [groupPrompt, setGroupPrompt] = useState("Was sollen wir heute zeichnen?");
-
   const [guessingGame, setGuessingGame] = useState<GuessingGame | null>(null)
+
+  const [stickerSize, setStickerSize] = useState (60)  
+  const [penWidth, setPenWidth] = useState(4)
+  const [showGrid, setShowGrid] = useState(false);
    
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
@@ -58,7 +62,6 @@ const requestGroupPrompt = () => {
   socket.emit("newGroupPrompt", activeLobbyId);
 };
   //---------------------------------------
-   //---------------------------------------
   // this is the personal initial prompt
   const [currentPrompt, setCurrentPrompt] = useState(prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)]);
 
@@ -68,7 +71,6 @@ const requestGroupPrompt = () => {
   //für unterschiedliche schwierigkeiten
   //prompts[Math.floor(Math.random()* prompts.length)]; 
   //--------------------------------------
-
   setCurrentPrompt(newPrompt);
 }
 
@@ -93,7 +95,13 @@ const requestGroupPrompt = () => {
       setActiveShape,
       guessingGame,
       mirrorMode,
-      setMirrorMode
+      setMirrorMode,
+      stickerSize,
+      setStickerSize,
+      penWidth,
+      setPenWidth,
+      showGrid,
+      setShowGrid,
 
       }}>
   

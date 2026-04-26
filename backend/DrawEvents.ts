@@ -8,12 +8,20 @@ type LineDrawEvent ={
   color:string;
   width:number;
 };
-type BlobDrawEvent ={
+/*type BlobDrawEvent ={
   type:"blob";
+  x: number;
+  y:number;
+  color:string;
+};*/
+
+type ShapeDrawEvent ={
+  type:"shape";
+  shapeType: string;
   x: number;
   y:number;
   color:string;
 };
 
 //ich hab hier export hinzugefügt
-export type DrawEvent = LineDrawEvent| BlobDrawEvent;
+export type DrawEvent = LineDrawEvent| ShapeDrawEvent;
