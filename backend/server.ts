@@ -30,15 +30,24 @@ type LineDrawEvent ={
   color:string;
   width:number;
 };
-type BlobDrawEvent ={
+/*type BlobDrawEvent ={
   type:"blob";
+  x: number;
+  y:number;
+  color:string;
+};*/
+
+type ShapeDrawEvent ={
+  type:"shape";
+  shapeType: string;
   x: number;
   y:number;
   color:string;
 };
 
 
-type DrawEvent = LineDrawEvent| BlobDrawEvent;
+
+type DrawEvent = LineDrawEvent| ShapeDrawEvent;
 
 // Zeichen-History pro Lobby (damit neue Joiner den aktuellen Canvas sehen)
 const lobbyHistory = new Map<string, DrawEvent[]>();
@@ -76,8 +85,19 @@ io.on("connection", (socket) => {
     socket.to(lobbyId).emit("draw", data)
   })
 
+
+  //-------------------------------------
   //for the group: 
-  //mit lobby ???????????????????????????
+  //mit lobby ?????????
+  // Fix für  GroupPrompt (Lobby Specific)
+  // :
+  /*socket.on("newGroupPrompt", (lobbyId: string) => {
+    const randomPrompt = "..."; 
+    // Sende es nur an die Leute in der Lobby!
+    io.to(lobbyId).emit("groupPrompt", randomPrompt); 
+  });*/
+  //-------------------------------------
+
   socket.on("newGroupPrompt", () => {
     const randomPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)] + " im Stil: " + drawingStyle[Math.floor(Math.random()*drawingStyle.length)]);
   
