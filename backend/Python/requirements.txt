@@ -6,6 +6,3 @@ torch
 torchvision
 transformers 
 Pillow
-#git submodule update --init
-#cd backend/Python/segment-anything-2
-#pip install -e .
