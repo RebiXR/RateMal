@@ -140,6 +140,7 @@ vite.config.ts.timestamp-*
 
 # Paint-by-numbers test output
 backend/Python/test_original.jpg
+CLAUDE.md
 backend/Python/test_segmented.jpg
 backend/Python/test_segmented_contours.jpg
 backend/Python/test_paint_by_numbers.jpg

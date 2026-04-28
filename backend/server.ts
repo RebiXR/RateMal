@@ -112,6 +112,28 @@ io.on("connection", (socket) => {
 
 
 
+  socket.on("generate-pbn", async ({ lobbyId, image, difficulty }: { lobbyId: string; image: string; difficulty?: number }) => {
+    if (!lobbyId || !image) return;
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/processPicture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, difficulty: difficulty ?? 5 }),
+      });
+
+      if (!response.ok) {
+        socket.emit("pbn-error", { message: "PBN generation failed" });
+        return;
+      }
+
+      const result = await response.json();
+      io.to(lobbyId).emit("pbn-ready", result);
+    } catch {
+      socket.emit("pbn-error", { message: "Could not reach PBN service" });
+    }
+  });
+
   socket.on("disconnect", () => {
     for(const lobby of lobbies.values()) {
       if(lobby.participants.delete(socket.id)){
