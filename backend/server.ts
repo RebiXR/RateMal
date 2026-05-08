@@ -1,15 +1,46 @@
-import express from "express";
+import 'dotenv/config';
+import express, { Request, Response } from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { lobbies, Lobby } from "./lobby.ts"
+import cookieParser from "cookie-parser";
+import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+import { lobbies, Lobby } from "./lobby.ts";
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
-
+import { connectDatabase, createUser, findUserByEmail } from "./repository/databaseService.ts";
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+app.use(cookieParser());
+
+// Environment variables
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_EXPIRY = process.env.JWT_EXPIRY || "7d";
+const BCRYPT_ROUNDS = 10;
+
+// Validation schemas
+const registerSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  username: z.string().min(3, "Username must be at least 3 characters").optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type RegisterRequest = z.infer<typeof registerSchema>;
+type LoginRequest = z.infer<typeof loginSchema>;
 
 const httpServer = createServer(app);
 
@@ -20,6 +51,112 @@ const drawingStyle = ["Comic", "Realistisch", "Schwarz Weiß", "3D"];
 
 const io = new Server(httpServer, {
   cors: { origin: "*" },
+});
+
+/**
+ * POST /api/auth/register
+ * Register a new user with email and password
+ */
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const data = registerSchema.parse(req.body);
+
+    // Check if email already exists
+    const existingUser = await findUserByEmail(data.email);
+    if (existingUser) {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+
+    // Hash password
+    const passwordHash = await bcryptjs.hash(data.password, BCRYPT_ROUNDS);
+
+    // Create user in database
+    const newUser = await createUser({
+      email: data.email,
+      passwordHash,
+      username: data.username,
+    });
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY as jwt.SignOptions['expiresIn'] }
+    );
+
+    // Set HttpOnly cookie
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: newUser,
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login user and return JWT in HttpOnly cookie
+ */
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const data = loginSchema.parse(req.body);
+
+    // Find user by email
+    const user = await findUserByEmail(data.email);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Compare passwords
+    const isPasswordValid = await bcryptjs.compare(data.password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY as jwt.SignOptions['expiresIn'] }
+    );
+
+    // Set HttpOnly cookie
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+    });
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // not nomalized 
@@ -185,4 +322,19 @@ io.on("connection", (socket) => {
 
 });
 
-httpServer.listen(3000, "0.0.0.0", () => console.log("Backend läuft auf Port 3000"));
+// Initialize database and start server
+const PORT = process.env.PORT || 3000;
+
+async function startServer() {
+  try {
+    await connectDatabase();
+    httpServer.listen(Number(PORT), "0.0.0.0", () => {
+      console.log(`Backend läuft auf Port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
