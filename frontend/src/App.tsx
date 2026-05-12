@@ -155,7 +155,7 @@ function App() {
       </div>
       {/*<ColorPicker />*/}
       <Prompts />
-      <LobbySelector />
+      <LobbySelector currentUser={currentUser} />
       
       
       

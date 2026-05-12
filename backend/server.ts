@@ -170,8 +170,9 @@ io.on("connection", (socket) => {
     socket.emit("lobby-list", getLobbyList())
   })
 
-  socket.on("create-lobby", () => {
-    createLobby();
+  socket.on("create-lobby", (payload?: { name?: string }) => {
+    const name = typeof payload?.name === "string" ? payload.name.trim().slice(0, 40) : undefined;
+    createLobby(name || undefined);
     io.emit("lobby-list", getLobbyList());
   })
 

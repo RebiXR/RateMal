@@ -2,6 +2,7 @@ import { socket } from "./socket";
 
 export type LobbyInfo = {
   id: string;
+  name?: string;
   position: number;
   participantCount: number;
 };
@@ -10,8 +11,8 @@ export const requestLobbies = () => {
   socket.emit("get-lobbies");
 };
 
-export const createLobby = () => {
-  socket.emit("create-lobby");
+export const createLobby = (name?: string) => {
+  socket.emit("create-lobby", { name });
 };
 
 export const deleteLobby = (lobbyId: string) => {

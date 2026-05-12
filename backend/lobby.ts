@@ -1,11 +1,13 @@
 type Lobby = {
   id: string;
+  name?: string;
   participants: Set<string>;
   createdAt: number;
 };
 
 type LobbyInfo = {
   id: string;
+  name?: string;
   position: number;
   participantCount: number;
 };
@@ -22,7 +24,7 @@ function makeid(length: number) {
     return result;
 }
 
-function createLobby() {
+function createLobby(name?: string) {
     let id = makeid(4);
     while (lobbies.has(id)) {
         id = makeid(4);
@@ -30,6 +32,7 @@ function createLobby() {
 
     const lobby: Lobby = {
         id,
+        name,
         participants: new Set(),
         createdAt: Date.now(),
     };
@@ -40,6 +43,7 @@ function createLobby() {
 function getLobbyList(): LobbyInfo[] {
     return Array.from(lobbies.values()).map((lobby, index) => ({
         id: lobby.id,
+        name: lobby.name,
         position: index + 1,
         participantCount: lobby.participants.size,
     }));
