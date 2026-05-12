@@ -1,8 +1,9 @@
 import { randomUUID } from 'crypto';
 
 /**
- * User interface for TypeScript type checking
+ * User model
  */
+
 export interface IUser {
   id: string;
   email: string;
@@ -11,9 +12,6 @@ export interface IUser {
   createdAt: Date;
 }
 
-/**
- * User model class for MongoDB operations
- */
 export class User implements IUser {
   id: string;
   email: string;
@@ -35,10 +33,9 @@ export class User implements IUser {
     this.createdAt = createdAt || new Date();
   }
 
-  /**
-   * Convert user instance to JSON for API responses
-   * Note: excludes passwordHash for security
-   */
+  
+   // Convert user instance to JSON for API responses
+   
   toJSON() {
     const { passwordHash, ...userWithoutPassword } = {
       id: this.id,
@@ -51,18 +48,12 @@ export class User implements IUser {
   }
 }
 
-/**
- * User data transfer object (DTO) for creation
- */
 export interface CreateUserDTO {
   email: string;
   passwordHash: string;
   username?: string;
 }
 
-/**
- * User data transfer object (DTO) for responses
- */
 export interface UserResponseDTO {
   id: string;
   email: string;

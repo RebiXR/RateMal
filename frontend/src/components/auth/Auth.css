@@ -1,0 +1,359 @@
+/* RateMal — Auth.css
+   Scoped with `rm-` prefix so it won't collide with the rest of your app.
+   Tweak the CSS variables in `.rm-auth-stage` to rebrand.
+*/
+
+.rm-auth-stage {
+  --rm-bg: #f3f4f7;
+  --rm-card: #ffffff;
+  --rm-ink: #0b1226;
+  --rm-ink-2: #4b5468;
+  --rm-ink-3: #8a93a6;
+  --rm-line: #e6e8ee;
+  --rm-field: #eef0f4;
+  --rm-field-2: #e6e9ef;
+  --rm-brand: #0a3cff;
+  --rm-brand-ink: #062bbf;
+  --rm-accent: #ffd60a;
+  --rm-accent-ink: #e8c000;
+  --rm-radius-card: 22px;
+  --rm-shadow: 0 30px 60px -28px rgba(11, 18, 38, .18),
+               0 12px 24px -16px rgba(11, 18, 38, .10);
+  --rm-font: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  font-family: var(--rm-font);
+  color: var(--rm-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background:
+    radial-gradient(1200px 600px at 80% -10%,
+      color-mix(in oklab, var(--rm-brand) 8%, transparent), transparent 60%),
+    radial-gradient(900px 500px at -10% 100%,
+      color-mix(in oklab, var(--rm-accent) 16%, transparent), transparent 60%),
+    var(--rm-bg);
+}
+
+.rm-auth-stage * { box-sizing: border-box; }
+
+/* ---------- Card ---------- */
+.rm-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--rm-card);
+  border-radius: var(--rm-radius-card);
+  box-shadow: var(--rm-shadow);
+  padding: 44px 48px 36px;
+  position: relative;
+  overflow: hidden;
+}
+.rm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--rm-brand) 0%, var(--rm-brand) 55%,
+    var(--rm-accent) 55%, var(--rm-accent) 100%);
+}
+
+/* ---------- Brand row ---------- */
+.rm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.rm-brand__mark {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--rm-ink);
+  color: var(--rm-accent);
+  display: grid; place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -.02em;
+  position: relative;
+}
+.rm-brand__mark::after {
+  content: "";
+  position: absolute; right: -4px; top: -4px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--rm-brand);
+  box-shadow: 0 0 0 3px var(--rm-card);
+}
+.rm-brand__name {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -.01em;
+}
+.rm-brand__name-accent { color: var(--rm-brand); }
+
+/* ---------- Tabs ---------- */
+.rm-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--rm-field);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 28px;
+}
+.rm-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--rm-ink-2);
+  padding: 10px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color .2s ease;
+}
+.rm-tab.is-active {
+  background: var(--rm-card);
+  color: var(--rm-ink);
+  box-shadow:
+    0 1px 2px rgba(11, 18, 38, .06),
+    0 4px 12px -6px rgba(11, 18, 38, .12);
+}
+
+/* ---------- Heading ---------- */
+.rm-head h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+.rm-head p {
+  margin: 0 0 28px;
+  color: var(--rm-ink-2);
+  font-size: 15px;
+}
+
+/* ---------- Form ---------- */
+.rm-form { display: grid; gap: 18px; }
+.rm-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rm-ink);
+  margin-bottom: 8px;
+  letter-spacing: .01em;
+}
+
+.rm-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rm-input__lead {
+  position: absolute;
+  left: 16px;
+  width: 18px; height: 18px;
+  color: var(--rm-ink-3);
+  pointer-events: none;
+}
+.rm-input input {
+  width: 100%;
+  height: 52px;
+  background: var(--rm-field);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 0 16px 0 46px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--rm-ink);
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.rm-input input::placeholder { color: var(--rm-ink-3); }
+.rm-input input:hover { background: var(--rm-field-2); }
+.rm-input input:focus {
+  outline: none;
+  background: var(--rm-card);
+  border-color: var(--rm-brand);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--rm-brand) 18%, transparent);
+}
+.rm-input__toggle {
+  position: absolute;
+  right: 6px;
+  height: 40px; width: 40px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--rm-ink-3);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.rm-input__toggle:hover {
+  color: var(--rm-ink);
+  background: rgba(11, 18, 38, .04);
+}
+
+.rm-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--rm-ink-3);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.rm-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---------- Checkbox ---------- */
+.rm-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--rm-ink-2);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.rm-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.rm-check__box {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  background: var(--rm-field);
+  border: 1.5px solid #d4d8e0;
+  display: grid; place-items: center;
+  transition: all .15s ease;
+  flex-shrink: 0;
+}
+.rm-check__box svg {
+  width: 14px; height: 14px;
+  color: #fff;
+  opacity: 0;
+  transform: scale(.6);
+  transition: opacity .15s, transform .15s;
+}
+.rm-check input:checked + .rm-check__box {
+  background: var(--rm-brand);
+  border-color: var(--rm-brand);
+}
+.rm-check input:checked + .rm-check__box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+.rm-check a {
+  color: var(--rm-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+.rm-check a:hover { text-decoration: underline; }
+
+/* ---------- Forgot link ---------- */
+.rm-forgot {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--rm-brand);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rm-forgot:hover { text-decoration: underline; }
+
+/* ---------- Buttons ---------- */
+.rm-btn {
+  appearance: none;
+  border: 0;
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -.005em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform .06s ease, background .15s ease, box-shadow .15s ease;
+}
+.rm-btn:active { transform: translateY(1px); }
+.rm-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.rm-btn--primary {
+  background: var(--rm-brand);
+  color: #fff;
+  box-shadow: 0 10px 24px -10px color-mix(in oklab, var(--rm-brand) 55%, transparent);
+}
+.rm-btn--primary:not(:disabled):hover { background: var(--rm-brand-ink); }
+.rm-btn--accent {
+  background: var(--rm-accent);
+  color: var(--rm-ink);
+  box-shadow: 0 10px 24px -10px color-mix(in oklab, var(--rm-accent) 70%, transparent);
+}
+.rm-btn--accent:not(:disabled):hover { background: var(--rm-accent-ink); }
+
+/* ---------- Footer / swap ---------- */
+.rm-swap {
+  text-align: center;
+  margin-top: 26px;
+  font-size: 14px;
+  color: var(--rm-ink-2);
+}
+.rm-swap button {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--rm-brand);
+  cursor: pointer;
+}
+.rm-swap button:hover { text-decoration: underline; }
+
+.rm-legal {
+  text-align: center;
+  color: var(--rm-ink-3);
+  font-size: 12px;
+  margin-top: 18px;
+  line-height: 1.6;
+}
+.rm-legal a {
+  color: var(--rm-ink-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Fade-in on tab switch ---------- */
+.rm-fade { animation: rm-fade .25s ease both; }
+@keyframes rm-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 540px) {
+  .rm-card {
+    padding: 32px 24px 28px;
+    border-radius: 18px;
+  }
+  .rm-head h1 { font-size: 26px; }
+}

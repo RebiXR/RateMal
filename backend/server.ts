@@ -14,7 +14,7 @@ import { mirrorDrawEvent } from "./MirrorDraw.ts";
 import { connectDatabase, createUser, findUserByEmail } from "./repository/databaseService.ts";
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -27,10 +27,10 @@ const BCRYPT_ROUNDS = 10;
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+    .min(8, "Password must be at least 8 characters"),
+    //.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    //.regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    //.regex(/[0-9]/, "Password must contain at least one number"),
   username: z.string().min(3, "Username must be at least 3 characters").optional(),
 });
 
