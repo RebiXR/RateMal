@@ -1,9 +1,5 @@
-
-import { useContext } from "react";
-import { AppContext } from "../../context/AppContext";
-import { twoKeyControls } from "../../input/twoKeyControls";
 import "../../style/colorPicker.css";
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 //import './colorPicker.css';
 
 

@@ -1,9 +1,16 @@
 type Lobby = {
   id: string;
   participants: Set<string>;
+  createdAt: number;
 };
 
+type LobbyInfo = {
+  id: string;
+  position: number;
+  participantCount: number;
+};
 
+const lobbies = new Map<string, Lobby>();
 
 function makeid(length: number) {
     var result           = '';
@@ -16,14 +23,31 @@ function makeid(length: number) {
 }
 
 function createLobby() {
-    const lobbies = new Map<string, Lobby>();
-    for (let i = 0; i < 3; i++) {
-        const id = makeid(4)
-        lobbies.set(id, { id, participants: new Set() })
+    let id = makeid(4);
+    while (lobbies.has(id)) {
+        id = makeid(4);
     }
 
-    return lobbies
+    const lobby: Lobby = {
+        id,
+        participants: new Set(),
+        createdAt: Date.now(),
+    };
+    lobbies.set(id, lobby);
+    return lobby;
 }
 
-export const lobbies = createLobby()
-export {Lobby}
+function getLobbyList(): LobbyInfo[] {
+    return Array.from(lobbies.values()).map((lobby, index) => ({
+        id: lobby.id,
+        position: index + 1,
+        participantCount: lobby.participants.size,
+    }));
+}
+
+function deleteLobby(lobbyId: string) {
+    return lobbies.delete(lobbyId);
+}
+
+export { lobbies, createLobby, deleteLobby, getLobbyList }
+export type { Lobby, LobbyInfo }

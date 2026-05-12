@@ -7,6 +7,8 @@ type LineDrawEvent ={
   to:PointN;
   color:string;
   width:number;
+  actionId?: string;
+  strokeId?: string;
 };
 /*type BlobDrawEvent ={
   type:"blob";
@@ -21,6 +23,8 @@ type ShapeDrawEvent ={
   x: number;
   y:number;
   color:string;
+  actionId?: string;
+  size?: number;
 };
 
 //ich hab hier export hinzugefügt

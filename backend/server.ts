@@ -1,15 +1,38 @@
-import express from "express";
+import "dotenv/config";
+import express, { Request, Response } from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import { lobbies, Lobby } from "./lobby.ts"
+import cookieParser from "cookie-parser";
+import bcryptjs from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
+import { createLobby, deleteLobby, getLobbyList, lobbies } from "./lobby.ts"
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
+import { connectDatabase, createUser, findUserByEmail } from "./repository/databaseService.ts";
 
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(express.json());
+app.use(cookieParser());
+
+const JWT_SECRET = process.env.JWT_SECRET || "rate-mal-dev-secret";
+const JWT_EXPIRY = process.env.JWT_EXPIRY || "7d";
+const BCRYPT_ROUNDS = 10;
+
+const registerSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  username: z.string().min(3, "Username must be at least 3 characters").optional(),
+});
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(1, "Password is required"),
+});
 
 const httpServer = createServer(app);
 
@@ -20,6 +43,96 @@ const drawingStyle = ["Comic", "Realistisch", "Schwarz Weiß", "3D"];
 
 const io = new Server(httpServer, {
   cors: { origin: "*" },
+});
+
+app.post("/api/auth/register", async (req: Request, res: Response) => {
+  try {
+    const data = registerSchema.parse(req.body);
+    const existingUser = await findUserByEmail(data.email);
+
+    if (existingUser) {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+
+    const passwordHash = await bcryptjs.hash(data.password, BCRYPT_ROUNDS);
+    const newUser = await createUser({
+      email: data.email,
+      passwordHash,
+      username: data.username,
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"] }
+    );
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({ message: "User registered successfully", user: newUser });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/auth/login", async (req: Request, res: Response) => {
+  try {
+    const data = loginSchema.parse(req.body);
+    const user = await findUserByEmail(data.email);
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const isPasswordValid = await bcryptjs.compare(data.password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY as jwt.SignOptions["expiresIn"] }
+    );
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/auth/logout", (_req: Request, res: Response) => {
+  res.clearCookie("authToken");
+  res.status(200).json({ message: "Logout successful" });
 });
 
 // not nomalized 
@@ -54,7 +167,22 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("get-lobbies", () => {
-    socket.emit("lobby-list", Array.from(lobbies.keys()))
+    socket.emit("lobby-list", getLobbyList())
+  })
+
+  socket.on("create-lobby", () => {
+    createLobby();
+    io.emit("lobby-list", getLobbyList());
+  })
+
+  socket.on("delete-lobby", (lobbyId: string) => {
+    if (!lobbyId || !deleteLobby(lobbyId)) return;
+
+    lobbyHistory.delete(lobbyId);
+    lobbyMirrorMode.delete(lobbyId);
+    io.to(lobbyId).emit("canvas-sync", []);
+    io.to(lobbyId).emit("lobby-deleted", lobbyId);
+    io.emit("lobby-list", getLobbyList());
   })
 
   socket.on('join-lobby', (lobbyId: string, userId: string) => {
@@ -66,6 +194,7 @@ io.on("connection", (socket) => {
     if (!lobbyHistory.has(lobbyId)) lobbyHistory.set(lobbyId, []);
     socket.emit("canvas-sync", lobbyHistory.get(lobbyId));
     socket.to(lobbyId).emit("User connected", userId)
+    io.emit("lobby-list", getLobbyList());
   });
 
   socket.on("draw", ({ lobbyId, data, canvasWidth }: { lobbyId: string; data: DrawEvent; canvasWidth?:number }) => {
@@ -96,6 +225,31 @@ io.on("connection", (socket) => {
 
     socket.to(lobbyId).emit("draw", data)
   }
+  })
+
+  socket.on("undo-draw", (lobbyId: string) => {
+    if (!lobbyId) return;
+
+    const hist = lobbyHistory.get(lobbyId) ?? [];
+    const lastEvent = hist[hist.length - 1];
+    if (!lastEvent) return;
+
+    const lastActionId = lastEvent.actionId ?? (lastEvent.type === "line" ? lastEvent.strokeId : undefined);
+
+    if (lastActionId) {
+      while (hist.length > 0) {
+        const event = hist[hist.length - 1];
+        const actionId = event.actionId ?? (event.type === "line" ? event.strokeId : undefined);
+        if (actionId !== lastActionId) break;
+        hist.pop();
+      }
+    } else {
+      const mirrorMode = lobbyMirrorMode.get(lobbyId) ?? false;
+      hist.splice(Math.max(0, hist.length - (mirrorMode ? 2 : 1)), mirrorMode ? 2 : 1);
+    }
+
+    lobbyHistory.set(lobbyId, hist);
+    io.to(lobbyId).emit("canvas-sync", hist);
   })
 
 
@@ -135,10 +289,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    let lobbyChanged = false;
     for(const lobby of lobbies.values()) {
       if(lobby.participants.delete(socket.id)){
         socket.to(lobby.id).emit("User disconnected", socket.id)
+        lobbyChanged = true;
       }
+    }
+    if (lobbyChanged) {
+      io.emit("lobby-list", getLobbyList());
     }
     console.log("User disconnected:", socket.id);
   });
@@ -185,4 +344,16 @@ io.on("connection", (socket) => {
 
 });
 
-httpServer.listen(3000, "0.0.0.0", () => console.log("Backend läuft auf Port 3000"));
+const PORT = Number(process.env.PORT || 3000);
+
+async function startServer() {
+  try {
+    await connectDatabase();
+    httpServer.listen(PORT, "0.0.0.0", () => console.log(`Backend läuft auf Port ${PORT}`));
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();

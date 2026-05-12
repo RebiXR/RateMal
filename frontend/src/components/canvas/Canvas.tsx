@@ -6,7 +6,7 @@
 import { useRef, useEffect, useContext, useState } from "react";
 import { AppContext } from "../../context/AppContext";
 import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync, type DrawEvent } from "../../socket/drawingEvents";
-import {drawBlob, drawStar, SHAPE_RENDERERS} from "../../utils/shapeHelpers";
+import { SHAPE_RENDERERS } from "../../utils/shapeHelpers";
 import { STICKER_CATEGORIES } from "../sticker/stickers";
 
 
@@ -14,10 +14,11 @@ type Point = { x: number; y: number };
 
 
 export default function Canvas() {
-  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid,setShowGrid } = useContext(AppContext);
+  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid } = useContext(AppContext);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<Point | null>(null);
+  const currentStrokeId = useRef<string | null>(null);
 
   const [previewPos, setPreviewPos] = useState<Point | null>(null);
   // Helpfunction, gets stickers as flat list
@@ -55,7 +56,8 @@ export default function Canvas() {
       x: x,
       y: y,
       color: currentColor,
-      size: stickerSize
+      size: stickerSize,
+      actionId: crypto.randomUUID(),
     };
     renderEvent(ctx, eventData);
     emitDraw({lobbyId: activeLobbyId, data: eventData});
@@ -146,6 +148,7 @@ export default function Canvas() {
         y: p.y,
         color: currentColor,
         size:stickerSize,
+        actionId: crypto.randomUUID(),
       };
       
       renderEvent(ctx, eventData);
@@ -155,6 +158,7 @@ export default function Canvas() {
 
     isDrawing.current = true;
     lastPoint.current = p;
+    currentStrokeId.current = crypto.randomUUID();
   };
 
 
@@ -171,7 +175,9 @@ export default function Canvas() {
       from: lastPoint.current,
       to: p,
       color: currentColor,
-      width: penWidth
+      width: penWidth,
+      actionId: currentStrokeId.current ?? undefined,
+      strokeId: currentStrokeId.current ?? undefined,
     };
 
     renderEvent(ctx, eventData);
@@ -182,6 +188,7 @@ export default function Canvas() {
   const endDraw = () => {
     isDrawing.current = false;
     lastPoint.current = null;
+    currentStrokeId.current = null;
   };
 
 

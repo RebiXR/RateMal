@@ -1,15 +1,24 @@
-import ColorPicker from "./ColorPicker";
 //import ShapeButton from "./ShapeButton";
-import { useRef, useEffect, useContext, useState } from "react";
+import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import PenButton from "./PenButton";
 import StickerMenu from "../sticker/stickerMenu";
+import { undoDraw } from "../../socket/drawingEvents";
 
 
 // components/toolbar/Toolbar.tsx
 export default function ToolBar() {
 
-  const { showGrid, setShowGrid } = useContext(AppContext);
+  const { activeLobbyId, showGrid, setShowGrid } = useContext(AppContext);
+
+  const toolButtonStyle = {
+    fontSize: "20px",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    background: "white",
+    cursor: "pointer",
+  };
 
   return (
     <div style={{ 
@@ -23,16 +32,24 @@ export default function ToolBar() {
       {/* Platzhalter Grid Button */}
       <button onClick={() => setShowGrid(!showGrid)} // Umschalten
         style={{ 
-          fontSize: '20px', 
-          padding: '10px', 
-          borderRadius: '8px', 
-          border: '1px solid #ccc',
+          ...toolButtonStyle,
           background: showGrid ? '#e0e0e0' : 'white', // Feedback, ob aktiv
-          cursor: 'pointer'
         }}
         title="Grid umschalten"
       >
         #
+      </button>
+      <button
+        onClick={() => activeLobbyId && undoDraw(activeLobbyId)}
+        disabled={!activeLobbyId}
+        style={{
+          ...toolButtonStyle,
+          opacity: activeLobbyId ? 1 : 0.55,
+          cursor: activeLobbyId ? "pointer" : "not-allowed",
+        }}
+        title="Undo"
+      >
+        Undo
       </button>
     </div>
   );

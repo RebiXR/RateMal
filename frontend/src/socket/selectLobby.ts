@@ -1,11 +1,37 @@
 import { socket } from "./socket";
 
+export type LobbyInfo = {
+  id: string;
+  position: number;
+  participantCount: number;
+};
+
 export const requestLobbies = () => {
   socket.emit("get-lobbies");
 };
 
-export const onLobbyList = (callback: (lobbies: string[]) => void) => {
+export const createLobby = () => {
+  socket.emit("create-lobby");
+};
+
+export const deleteLobby = (lobbyId: string) => {
+  socket.emit("delete-lobby", lobbyId);
+};
+
+export const onLobbyList = (callback: (lobbies: LobbyInfo[]) => void) => {
   socket.on("lobby-list", callback);
+};
+
+export const offLobbyList = () => {
+  socket.off("lobby-list");
+};
+
+export const onLobbyDeleted = (callback: (lobbyId: string) => void) => {
+  socket.on("lobby-deleted", callback);
+};
+
+export const offLobbyDeleted = () => {
+  socket.off("lobby-deleted");
 };
 
 export const joinLobby = (lobbyId: string, userId: string) => {

@@ -126,7 +126,7 @@ export const drawImageSticker = (
   ctx: CanvasRenderingContext2D, 
   x: number, 
   y: number, 
-  color: string, // color wird hier ignoriert, da das Bild eigene Farben hat
+  _color: string,
   src: string,
   size: number =60
 ) => {

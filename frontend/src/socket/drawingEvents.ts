@@ -17,6 +17,8 @@ type lineDrawEvent = {
   to: Point;
   color: string;
   width?: number; //optional
+  actionId?: string;
+  strokeId?: string;
 };
 
 /**
@@ -29,6 +31,7 @@ type ShapeDrawEvent = {
   y: number;
   color: string;
   size?: number;
+  actionId?: string;
 };
 
 /**
@@ -50,6 +53,10 @@ type DrawPayload = {
  */
 export const emitDraw = (payload: DrawPayload) => {
   socket.emit("draw", payload);
+};
+
+export const undoDraw = (lobbyId: string) => {
+  socket.emit("undo-draw", lobbyId);
 };
 
 /**

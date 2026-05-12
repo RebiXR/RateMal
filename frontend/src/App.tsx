@@ -1,16 +1,15 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import './App.css'
 import Prompts from './components/canvas/Prompts';
 import Canvas from "./components/canvas/Canvas";
 import ColorPicker from './components/toolbar/ColorPicker';
-import ShapeButton from './components/toolbar/ShapeButton';
-import PenButton from './components/toolbar/PenButton';
 import LobbySelector from './components/canvas/LobbySelector';
 import { twoKeyControls } from './input/twoKeyControls';
 import GuessingGameCreator from './components/canvas/GuessingGame';
 import MirrorButton from './components/canvas/MirrorSelector';
 import ToolBar from './components/toolbar/Toolbar';
 import { AppContext } from "./context/AppContext";
+import Auth, { type RegisterData, type SignInData } from './components/auth/Auth';
 
 const TOP_BAR_HEIGHT = 72;
 //const BOTTOM_BAR_HEIGHT = 48;
@@ -19,10 +18,141 @@ const RIGHT_SIDEBAR_WIDTH = 56; // schmaler
 
 function App() {
   const { tool, currentColor, setCurrentColor,setPenWidth, penWidth, setStickerSize, stickerSize } = useContext(AppContext);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; username?: string } | null>(null);
   twoKeyControls();
+
+  const signIn = async ({ email, password }: SignInData) => {
+    setAuthError(null);
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setAuthError(data.error ?? "Login failed");
+        return;
+      }
+
+      setCurrentUser(data.user);
+      setAuthOpen(false);
+    } catch {
+      setAuthError("Could not reach server");
+    }
+  };
+
+  const register = async ({ name, email, password }: RegisterData) => {
+    setAuthError(null);
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, username: name }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        const error = Array.isArray(data.error) ? data.error[0]?.message : data.error;
+        setAuthError(error ?? "Registration failed");
+        return;
+      }
+
+      setCurrentUser(data.user);
+      setAuthOpen(false);
+    } catch {
+      setAuthError("Could not reach server");
+    }
+  };
+
+  const logout = async () => {
+    await fetch("http://localhost:3000/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+    setCurrentUser(null);
+  };
+
+  if (authOpen) {
+    return (
+      <div>
+        <button
+          onClick={() => setAuthOpen(false)}
+          style={{
+            position: "fixed",
+            top: 16,
+            left: 16,
+            zIndex: 20,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #ccc",
+            background: "white",
+            fontWeight: 700,
+          }}
+        >
+          Zur App
+        </button>
+        {authError && (
+          <div
+            style={{
+              position: "fixed",
+              top: 16,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 30,
+              padding: "10px 20px",
+              borderRadius: 8,
+              background: "#fee2e2",
+              color: "#991b1b",
+              fontWeight: 700,
+            }}
+          >
+            {authError}
+          </div>
+        )}
+        <Auth onSignIn={signIn} onRegister={register} />
+      </div>
+    );
+  }
 
   return (
     <div>
+      <div
+        style={{
+          position: "fixed",
+          top: 12,
+          right: 12,
+          zIndex: 30,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {currentUser && (
+          <span
+            style={{
+              padding: "8px 10px",
+              borderRadius: 8,
+              background: "white",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              fontSize: 14,
+            }}
+          >
+            {currentUser.username || currentUser.email}
+          </span>
+        )}
+        <button
+          className="btn btn-secondary"
+          onClick={currentUser ? logout : () => setAuthOpen(true)}
+        >
+          {currentUser ? "Logout" : "Login"}
+        </button>
+      </div>
       {/*<ColorPicker />*/}
       <Prompts />
       <LobbySelector />
