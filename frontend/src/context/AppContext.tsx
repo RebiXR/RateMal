@@ -7,6 +7,7 @@ import { createContext, useState, type ReactNode, useEffect } from "react";
 import type { GuessingGame } from "../components/canvas/GuessingGame";
 //import io from "socket.io-client";
 import { socket } from "../socket/socket";
+import { searchImages as fetchImages } from "../api/imageApi";
 
 
 //const socket = io("http://localhost:3000");
@@ -17,6 +18,7 @@ const preposition = ["und", "neben", "vor", "mit"];
 
 
 export const AppContext = createContext<any>({});
+//export const AppContext = createContext<any>(null);
 
 
 const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -35,7 +37,11 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [stickerSize, setStickerSize] = useState (60)  
   const [penWidth, setPenWidth] = useState(4)
   const [showGrid, setShowGrid] = useState(false);
-   
+
+  //for inspo pics
+  const [images, setImages] = useState<any[]>([]);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
+
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
     setGroupPrompt(prompt);
@@ -74,6 +80,12 @@ const requestGroupPrompt = () => {
   setCurrentPrompt(newPrompt);
 }
 
+//for images
+const searchImages = async (query: string) => {
+  const data = await fetchImages(query);
+  setImages(data);
+};
+
 
 
 
@@ -102,6 +114,10 @@ const requestGroupPrompt = () => {
       setPenWidth,
       showGrid,
       setShowGrid,
+      images,
+      searchImages,
+      selectedImage,
+      setSelectedImage,
 
       }}>
   

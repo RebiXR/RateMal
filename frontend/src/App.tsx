@@ -11,14 +11,17 @@ import GuessingGameCreator from './components/canvas/GuessingGame';
 import MirrorButton from './components/canvas/MirrorSelector';
 import ToolBar from './components/toolbar/Toolbar';
 import { AppContext } from "./context/AppContext";
+import ImageSearch from './components/canvas/ImageSearch';
 
 const TOP_BAR_HEIGHT = 72;
 //const BOTTOM_BAR_HEIGHT = 48;
 const LEFT_SIDEBAR_WIDTH = 60;
 const RIGHT_SIDEBAR_WIDTH = 56; // schmaler
 
+//const { selectedImage } = useContext(AppContext);
+
 function App() {
-  const { tool, currentColor, setCurrentColor,setPenWidth, penWidth, setStickerSize, stickerSize } = useContext(AppContext);
+  const { tool, currentColor, setCurrentColor,setPenWidth, penWidth, setStickerSize, stickerSize, selectedImage } = useContext(AppContext);
   twoKeyControls();
 
   return (
@@ -26,6 +29,7 @@ function App() {
       {/*<ColorPicker />*/}
       <Prompts />
       <LobbySelector />
+      <ImageSearch/>
       
       
       
@@ -61,10 +65,31 @@ function App() {
         {/* Trenner */}
         <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
         { /*<GuessingGameCreator /> */}
-      </div>
+      </div> {/* Selected inspo pic */}
+        {selectedImage && (
+          <div style={{
+            position: "absolute",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 20,
+            background: "white",
+            padding: "10px",
+            borderRadius: "10px",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+          }}>
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.alt}
+              style={{ maxHeight: "300px" }}
+            />
+          </div>
+        )}
+
 
       {/* 2. MITTLERE REIHE */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
 
         {/* LINKE SIDEBAR */}
         <div style={{
@@ -85,6 +110,10 @@ function App() {
 
         {/* CANVAS */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+
+       
+
+
           <Canvas />
         </div>
 

@@ -6,10 +6,17 @@ import { lobbies, Lobby } from "./lobby.ts"
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
+import imageRoutes from "./imageRoutes.ts";
+import dotenv from "dotenv";
+dotenv.config();
 
-
+//test für api key:
+//console.log(process.env.PEXELS_API_KEY);
 const app = express();
 app.use(cors());
+app.use(imageRoutes);
+app.use("/", imageRoutes);
+
 
 const httpServer = createServer(app);
 
