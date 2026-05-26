@@ -1,71 +1,9 @@
-//drawBlob, drawStar, etc. 
+//drawBlob, drawStar, rendner sticker etc. 
 
-
-
-
-
-
-
-  /*const PERMANENT_BLOB = createPermanentBlobShape();
-
-
-
-  const drawBlob = (x: number, y: number, color: string) => {
-    
-    /*original
-    const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.fillStyle = color;
-
-    ctx.beginPath();
-    ctx.arc(x, y, 25, 0, Math.PI * 2);
-    ctx.fill();*/
-
-
-
-    /*const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.fillStyle = color;
-
-    // gute werte :50
-    const radius = 28;
-    const points = 75;
-    const variance= 8.5;
-
-    ctx.beginPath();
-
-    for (let i = 0; i <= points; i++) {
-      const angle = (i / points) * Math.PI * 2;
-      const r = radius + Math.random() * variance-variance/2 ;
-      const px = x + Math.cos(angle) * r;
-      const py = y + Math.sin(angle) * r;
-
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-
-    ctx.closePath();
-    //ctx.shadowColor = color;
-    //ctx.shadowBlur = 10;
-    ctx.fill();*/
-    /*const ctx = canvasRef.current!.getContext("2d")!;
-    ctx.fillStyle = color;
-
-    ctx.beginPath();
-    PERMANENT_BLOB.forEach((p, i) => {
-      const px = x + p.x;
-      const py = y + p.y;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    });
-    ctx.closePath();
-    ctx.fill();
-
-
-  
-  };
-*/
 
 
   export type Point = { x: number; y: number };
+
 
   export const createPermanentBlobShape = (
     radius = 28,
@@ -83,7 +21,6 @@
         y: Math.sin(angle) * r,
       });
     }
-
     return shape;
   };
 
@@ -107,6 +44,8 @@ export const drawBlob = (ctx: CanvasRenderingContext2D, x: number, y: number, co
 };
 
 
+
+
 export const drawStar = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, size: number =60) => {
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -121,6 +60,9 @@ export const drawStar = (ctx: CanvasRenderingContext2D, x: number, y: number, co
   ctx.closePath();
   ctx.fill();
 };
+
+
+
 
 export const drawImageSticker = (
   ctx: CanvasRenderingContext2D, 
@@ -153,3 +95,51 @@ export const SHAPE_RENDERERS: Record<string, Function> = {
   tree2: (ctx: any, x: any, y: any, color: any, size: any) => drawImageSticker(ctx, x, y, color, '/sticker/tree.png', size),
   
 };
+
+
+
+
+
+
+//-----------------------------------------------------
+//render sticker from canvas to cleaner version
+
+export const renderSticker = (
+  ctx: CanvasRenderingContext2D,
+  id: string,
+  x: number,
+  y: number,
+  size: number,
+  allStickers: any[] // List of Sticker 
+) => {
+  //  Check for SHAPE_RENDERERS (mathematische Formen)
+  if (SHAPE_RENDERERS[id]) {
+    SHAPE_RENDERERS[id](ctx, x, y, "#000", size); // Farbe ggf. aus Context
+    return;
+  }
+
+
+  // search in Sticker-Liste
+  const sticker = allStickers.find(s => s.id === id);
+  if (!sticker) return;
+
+  if (sticker.isImage || sticker.icon.startsWith("data:") || sticker.icon.startsWith("/")) {
+    const img = new Image();
+    img.src = sticker.icon;
+    img.onload = () => {
+      ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+    };
+  } else {
+    // Emoji
+    ctx.font = `${size}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(sticker.icon, x, y + (size * 0.1));
+  }
+};
+
+
+
+
+
+

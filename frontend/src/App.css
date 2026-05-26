@@ -1,54 +1,339 @@
-#root {
-  width: 100%;
-  height: 100%;
-  max-width: none;
-  margin: 0 auto;
-  padding: 0;
-  text-align: left;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+:root {
+  --bg-main: #f4f4f0;      /*sanfte Beige*/
+  --bg-card: #ffffff;
+  --primary: #1a6dd4;
+  --primary-light: #eef6ff;
+  --accent-yellow: #fffbeb;
+  --text-main: #1a1a1a;
+  --text-muted: #666;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
+  --radius-lg: 20px;
+  --radius-md: 14px;
 }
 
 body, html {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
   overflow: hidden;
-  background-color: #e7efe9; 
-  font-family: Arial, sans-serif; 
+  background-color: var(--bg-main);
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Base -Button class*/
+.btn-base {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0,0,0,0.05);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.btn-base:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-color: var(--primary);
+}
+
+.btn-base:active { transform: scale(0.98); }
+
+/* Badge Style  Lobby/Spielerzahl */
+.badge {
+  background: var(--primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-left: 6px;
+}
+
+
+
+
+
+
+
+
+
+
+/*button.css von vorher--------------------------------------*/
+
+.btn {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+}
+
+.btn:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  background: #f3f4f6;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: 3px solid #c7d2fe;
+  outline-offset: 3px;
+}
+
+.btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn.active {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.btn-secondary {
+  background: white;
+  color: #4f46e5;
+  border: 2px solid #4f46e5;
+}
+
+
+
+/* Font for whole App */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Spezifische Anpassung  Top-Bar Container */
+.top-bar-element select, 
+.top-bar-element button {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+
+.top-bar-element select:hover, 
+.top-bar-element button:hover {
+  border-color: #1a6dd4;
+  background: #f8fbff;
+  transform: translateY(-1px);
+}
+
+/* Sticker Slider  */
+input[type="range"] {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 5px;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #1a6dd4;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+
+
+
+
+
+/*--------------------------------*/
+/* Inspo Option A Styles */
+.btn-prompt, .btn-prompt-personal {
+  display: flex;
+  align-items: center;
+  padding: 10px 18px;
+  font-size: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.05);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+/* Gelber Chip für alle */
+.btn-prompt {
+  background: #fffbeb; /*Gelb */
+}
+
+.btn-prompt:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+/* Blauer Chip für dich */
+.btn-prompt-personal {
+  background: #f0f9ff;
+}
+
+.btn-prompt-personal:hover {
+  background: #e0f2fe;
+  transform: translateY(-1px);
+}
+
+
+
+
+
+
+
+
+/*Lobby Selector---------------------------------------*/
+
+
+/* Lobby-Button */
+.top-bar-element .lobby-btn {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: white;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.lobby-btn:hover {
+  background: #f8fbff;
+  border-color: #1a6dd4;
+  color: #1a6dd4;
+  transform: translateY(-1px);
+}
+
+/* activ (Blau) */
+.lobby-btn.active {
+  background: #eef6ff;
+  border-color: #1a6dd4;
+  color: #1a6dd4;
+  box-shadow: 0 2px 8px rgba(26, 109, 212, 0.15);
+}
+/* little dot */
+.lobby-indicator {
+  width: 8px;
+  height: 8px;
+  background: #1a6dd4;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+
+
+
+
+
+
+/* sticker menu---------------------------------------*/
+
+.category-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: "12px";
+  letter-spacing: "0.5px";
+  
+}
+
+
+
+
+
+/* Start- page-------------------------------------------- */
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* colums */
+  gap: 20px;
+  padding: 40px;
 }
 
 .card {
-  padding: 2em;
+  border-radius: 20px;
+  padding: 30px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-.read-the-docs {
-  color: #888;
+.card.main-blue {
+  background: #1a6dd4;
+  color: white;
+}
+
+.card.alt-yellow {
+  background: #fff4e0;
+  border: 2px solid #ffcc80;
+  color: #855e28;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mode-card-main:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.05);
+  transition: all 0.3s ease;
+}
+
+.mode-card-sub:hover {
+  transform: translateY(-4px);
+  background: #fef3c7 !important;
+  transition: all 0.3s ease;
+}
+
+.sticker-overlay-container {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  bottom: 20px;
+  width: 300px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  border: 1px solid rgba(0,0,0,0.05);
 }

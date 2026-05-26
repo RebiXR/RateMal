@@ -2,7 +2,8 @@ import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import { startGuessingGame, giveGuess } from "../../socket/selectLobby";
 import { socket } from "../../socket/socket";
-import "../../style/buttons.css";
+//import "../../style/buttons.css";
+import "../../App.css";
 
 
 export interface GuessingGame {

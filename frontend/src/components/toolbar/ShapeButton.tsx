@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
-import "../../style/buttons.css";
+//import "../../style/buttons.css";
+import "../../App.css";
 
 
 export default function ShapeMenu() {

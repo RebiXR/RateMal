@@ -1,7 +1,8 @@
 import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
-import "../../style/buttons.css";
+//import "../../style/buttons.css";
 import { socket } from "../../socket/socket";
+import "../../App.css";
 
 const MirrorButton = () => {
   const { activeLobbyId, mirrorMode, setMirrorMode } = useContext(AppContext);

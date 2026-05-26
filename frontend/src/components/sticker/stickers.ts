@@ -1,5 +1,6 @@
 import { Sticker } from "lucide-react";
 
+
 export interface Sticker {
   id: string;
   label: string;
@@ -21,7 +22,7 @@ export const STICKER_CATEGORIES:  Record<string,Sticker[]> = {
     { id: 'cherry', label: 'cherry', icon: '/sticker/cherry.png' , isImage: true},
     { id: 'flower1', label: 'flower', icon: '/sticker/4383982.png' , isImage: true},
     { id: 'flower2', label: 'flower', icon: '/sticker/4645828.png' , isImage: true},
-    { id: 'plant1', label: 'plant', icon: '/sticker/plant1.png' , isImage: true},
+    //{ id: 'plant1', label: 'plant', icon: '/sticker/plant1.png' , isImage: true},
   ],
   Tiere: [
     { id: 'cat', label: 'Katze', icon: '🐱' },

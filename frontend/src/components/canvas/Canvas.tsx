@@ -2,11 +2,10 @@
 //
 //
 //--------------------------------
-
 import { useRef, useEffect, useContext, useState } from "react";
 import { AppContext } from "../../context/AppContext";
 import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync, type DrawEvent } from "../../socket/drawingEvents";
-import {drawBlob, drawStar, SHAPE_RENDERERS} from "../../utils/shapeHelpers";
+import { renderSticker} from "../../utils/shapeHelpers";
 import { STICKER_CATEGORIES } from "../sticker/stickers";
 
 
@@ -14,18 +13,34 @@ type Point = { x: number; y: number };
 
 
 export default function Canvas() {
-  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid,setShowGrid } = useContext(AppContext);
+
+  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid,setShowGrid, mirrorMode } = useContext(AppContext);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<Point | null>(null);
 
   const [previewPos, setPreviewPos] = useState<Point | null>(null);
+  const [customStickers, setCustomStickers] = useState<any[]>([]);
   // Helpfunction, gets stickers as flat list
-  const allStickers = Object.values(STICKER_CATEGORIES).flat();
+  //const allStickers = Object.values(STICKER_CATEGORIES).flat();
+  const allStickers = [...Object.values(STICKER_CATEGORIES).flat(), ...customStickers];
   const currentStickerObj = allStickers.find(s => s.id === activeShape);
 
+  
 
 
+
+  useEffect(() => {
+    // Lade custom stickers damit der Ghost sie anzeigen kann
+    const saved = localStorage.getItem("custom_stickers");
+    if (saved) setCustomStickers(JSON.parse(saved));
+  }, [activeShape]); // Wir laden neu, wenn sich die Auswahl ändert, um sicherzugehen
+
+
+
+
+
+  
   const handleMouseMove= (e: React.MouseEvent) =>{
 
     const p = getPos(e.nativeEvent);
@@ -67,33 +82,9 @@ export default function Canvas() {
 
   // ZENTRALE ZEICHEN-LOGIK (Fix für alle Sticker & Linien)
   const renderEvent = (ctx: CanvasRenderingContext2D, data: any) => {
+
     if (data.type === "shape") {
-      const finalSize= data.size || 60;
-
-
-      if (SHAPE_RENDERERS[data.shapeType]) {
-        SHAPE_RENDERERS[data.shapeType](ctx, data.x, data.y, data.color, finalSize);
-      } else {
-        // Dynamisch für alle aus Liste
-        const sticker = allStickers.find(s => s.id === data.shapeType);
-        if (sticker) {
-
-          if(sticker.isImage){
-
-            const img = new Image();
-            img.src = sticker.icon;
-            img.onload = () => {
-              ctx.drawImage(img, data.x - finalSize / 2, data.y - finalSize / 2, finalSize, finalSize);
-            };
-          }else{
-            ctx.font = `${finalSize}px serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(sticker.icon, data.x, data.y +( finalSize* 0.1));
-          }
-          
-        }
-      }
+      renderSticker(ctx, data.shapeType, data.x, data.y, data.size || 60, allStickers);
     } else if (data.type === "line") {
       ctx.strokeStyle = data.color;
       ctx.lineWidth = data.width ?? 4;
@@ -259,6 +250,9 @@ export default function Canvas() {
 
 
 
+
+
+
   return (
 
     <div style={{ position: 'relative', width: '100%', height: '100%', cursor: tool === 'shape' ? 'none' : 'crosshair' }}>
@@ -303,9 +297,15 @@ export default function Canvas() {
     )}
 
   </div>
- 
-
 
   );
+
+
+
+
+
+
+
+
 }
 
