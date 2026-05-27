@@ -149,4 +149,4 @@ package-lock.json*
 pbn_output
 .idea
 .env
-.idea/RateMal.iml
+backend/Python/__pycache__/

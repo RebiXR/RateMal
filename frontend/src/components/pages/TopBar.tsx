@@ -1,6 +1,7 @@
 import LobbySelector from '../canvas/LobbySelector';
 import Prompts from '../canvas/Prompts';
 import GuessingGameCreator from '../canvas/GuessingGame';
+import PBNGame from '../paintByNumbers/PBNGame';
 
 interface TopBarProps {
   view: 'home' | 'canvas';
@@ -44,6 +45,7 @@ export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
             <div className="top-bar-element"><Prompts /></div>
             <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)' }} />
             <GuessingGameCreator />
+            <PBNGame />
           </>
         )}
         {view === 'home' && (

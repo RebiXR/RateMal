@@ -33,11 +33,6 @@ def _bgr_to_rgb(bgr: tuple) -> dict:
     return {"r": int(r), "g": int(g), "b": int(b)}
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
 @app.post("/processPicture")
 def process_picture(body: PictureRequest):
     # Strip data-URL prefix if present ("data:image/png;base64,...")
@@ -49,10 +44,10 @@ def process_picture(body: PictureRequest):
     if image is None:
         return {"error": "Could not decode image"}
 
-    denoised    = denoisePicture(image)
+    denoised = denoisePicture(image)
     segmentation = pictureSegmentation(denoised, body.difficulty)
-    contours    = buildContours(segmentation)
-    pbn         = labelSegments(contours, segmentation)
+    contours = buildContours(segmentation)
+    pbn = labelSegments(contours, segmentation)
 
     palette = [
         {"index": i + 1, "color": _bgr_to_rgb(color)}
@@ -61,8 +56,8 @@ def process_picture(body: PictureRequest):
 
     return {
         "pbn_template": _encode_image(pbn),                        # outlines + numbers
-        "completed":    _encode_image(segmentation.segmented_image), # flat-colour result
-        "palette":      palette,
+        "completed": _encode_image(segmentation.segmented_image), # flat-colour result
+        "palette": palette,
     }
 
 # Run server with "fastapi dev"

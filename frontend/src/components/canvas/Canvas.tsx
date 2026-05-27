@@ -5,6 +5,7 @@
 import { useRef, useEffect, useContext, useState } from "react";
 import { AppContext } from "../../context/AppContext";
 import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync, type DrawEvent } from "../../socket/drawingEvents";
+import { onPBNReady, offPBNReady, toPngDataUrl, type PBNResult } from "../../socket/PBNEvents";
 import { renderSticker} from "../../utils/shapeHelpers";
 import { STICKER_CATEGORIES } from "../sticker/stickers";
 
@@ -241,10 +242,27 @@ export default function Canvas() {
       history.forEach(ev => renderEvent(ctx, ev));
     });
 
+    // PAINT-BY-NUMBERS Vorlage auf den Canvas legen
+    const handlePBNReady = (result: PBNResult) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, x, y, w, h);
+      };
+      img.src = toPngDataUrl(result.pbn_template);
+    };
+    onPBNReady(handlePBNReady);
+
     return () => {
       ro.disconnect();
       offDraw();
       offCanvasSync();
+      offPBNReady(handlePBNReady);
     };
   }, []); // Wichtig: Leeres Array, damit Listener nur 1x registriert werden
 
