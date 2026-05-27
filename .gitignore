@@ -147,3 +147,6 @@ backend/Python/test_paint_by_numbers.jpg
 package-lock.json*
 .gitignore
 pbn_output
+.idea
+.env
+.idea/RateMal.iml

@@ -5,9 +5,10 @@ import GuessingGameCreator from '../canvas/GuessingGame';
 interface TopBarProps {
   view: 'home' | 'canvas';
   onBack: () => void;
+  onLoginClick?: () => void;
 }
 
-export default function TopBar({ view, onBack }: TopBarProps) {
+export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
   return (
     <div style={{ 
       height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
@@ -45,7 +46,27 @@ export default function TopBar({ view, onBack }: TopBarProps) {
             <GuessingGameCreator />
           </>
         )}
-        {view === 'home' && <button className="btn btn-secondary">?</button>}
+        {view === 'home' && (
+          <>
+            <button
+              onClick={onLoginClick}
+              style={{
+                background: '#0a3cff',
+                color: '#fff',
+                padding: '10px 24px',
+                fontWeight: 700,
+                fontSize: '15px',
+                borderRadius: '10px',
+                border: 'none',
+                cursor: 'pointer',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Login
+            </button>
+            <button className="btn btn-secondary">?</button>
+          </>
+        )}
       </div>
     </div>
   );
