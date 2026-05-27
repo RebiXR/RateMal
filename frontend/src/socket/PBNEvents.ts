@@ -33,6 +33,7 @@ export const emitGeneratePBN = (payload: GeneratePBNPayload): void => {
   socket.emit("generate-pbn", payload);
 };
 
+//Status event listeners for PBN generation
 export const onPBNReady = (callback: (result: PBNResult) => void): void => {
   socket.on("pbn-ready", callback);
 };
