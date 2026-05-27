@@ -47,6 +47,8 @@ interface AuthProps {
   onSignIn?: (data: SignInData) => void;
   onRegister?: (data: RegisterData) => void;
   onForgotPassword?: () => void;
+  overlay?: boolean;
+  onClose?: () => void;
 }
 
 /* ---------- Tiny icon set (inline SVG, no deps) ---------- */
@@ -352,12 +354,17 @@ export default function Auth({
   onSignIn,
   onRegister,
   onForgotPassword,
+  overlay = false,
+  onClose,
 }: AuthProps) {
   const [view, setView] = useState<'signin' | 'register'>(initialView);
 
   return (
-    <div className="rm-auth-stage">
-      <main className="rm-card" role="main">
+    <div
+      className={'rm-auth-stage' + (overlay ? ' rm-auth-stage--overlay' : '')}
+      onClick={overlay ? onClose : undefined}
+    >
+      <main className="rm-card" role="main" onClick={overlay ? (e) => e.stopPropagation() : undefined}>
         <Brand letter={brandLetter} name={brandName} />
 
         <div className="rm-tabs" role="tablist" aria-label="Authentication">

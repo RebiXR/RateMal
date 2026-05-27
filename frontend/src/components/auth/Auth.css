@@ -40,6 +40,14 @@
 
 .rm-auth-stage * { box-sizing: border-box; }
 
+/* ---------- Overlay / modal mode ---------- */
+.rm-auth-stage--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  min-height: unset;
+}
+
 /* ---------- Card ---------- */
 .rm-card {
   width: 100%;
