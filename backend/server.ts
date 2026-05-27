@@ -51,10 +51,7 @@ const drawingStyle = ["Comic", "Realistisch", "Schwarz Weiß", "3D"];
 
 const io = new Server(httpServer, {
   cors: { origin: "*" },
-  // Headroom for image payloads (e.g. PBN uploads); default is 1 MB, which
-  // silently drops larger images. The frontend downscales to ~1200px JPEG
-  // (typically <500 KB), so 5 MB is a generous safety net without inviting
-  // memory-heavy requests.
+  //increased deafault to support bigger img
   maxHttpBufferSize: 5e6, // 5 MB
 });
 

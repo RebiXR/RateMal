@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { MongoClient, ServerApiVersion, ObjectId, Db, Collection } from 'mongodb';
 import { User, IUser, CreateUserDTO, UserResponseDTO } from './user.ts';
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://eingeiger:<db_password>@ratemaldb.bbp0f9s.mongodb.net/?appName=RateMalDB";
+const uri = process.env.MONGODB_URI as string;
 const databaseName = "RateMalDB";
 const usersCollectionName = "users";
 
