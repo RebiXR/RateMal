@@ -1,17 +1,17 @@
 import 'dotenv/config';
 import express, { Request, Response } from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { lobbies, Lobby } from "./lobby.ts";
+import { lobbies, Lobby, getLobbyList, generateLobbyId } from "./lobby.ts";
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
-import { connectDatabase, createUser, findUserByEmail } from "./repository/databaseService.ts";
+import { connectDatabase, createUser, findUserByEmail, findUserById } from "./repository/databaseService.ts";
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
@@ -161,7 +161,30 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// not nomalized 
+
+// returns currently authenticated user based on token cookie
+
+app.get('/api/auth/me', async (req: Request, res: Response) => {
+  const token = req.cookies?.authToken;
+  if (!token) {
+    return res.status(401).json({ error: "not authenticated" });
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+    const user = await findUserById(payload.userId);
+    if (!user) {
+      return res.status(401).json({ error: "not authenticated" });
+    }
+    return res.status(200).json({
+      id: user.id,
+      email: user.email,
+      username: user.username ?? user.email.split('@')[0],
+    });
+  } catch {
+    return res.status(401).json({ error: "not authenticated" });
+  }
+});
+
 /**type PointN = { x: number; y: number }; // normalized 0..1
 
 type LineDrawEvent ={
@@ -189,22 +212,122 @@ const lobbyHistory = new Map<string, DrawEvent[]>();
 // for mirrored drawing option
 const lobbyMirrorMode = new Map<string, boolean>();
 
+// socketId -> username
+const usernames = new Map<string, string>();
+
+function broadcastLobbyList() {
+  io.emit("lobby-list", getLobbyList());
+}
+
+// remove socket from lobby handle delete and admin assignment
+function removeParticipant(socket: Socket, lobby: Lobby) {
+  if (!lobby.participants.has(socket.id)) return;
+
+  socket.leave(lobby.id);
+  lobby.participants.delete(socket.id);
+  socket.to(lobby.id).emit("user disconnected", usernames.get(socket.id) ?? socket.id);
+
+  if (lobby.adminSocketId === socket.id) {
+    const remaining = Array.from(lobby.participants);
+    lobby.adminSocketId = remaining.length > 0
+      ? remaining[Math.floor(Math.random() * remaining.length)]
+      : null;
+  }
+
+  if (lobby.participants.size === 0 && !lobby.isDefault) {
+    lobbies.delete(lobby.id);
+  }
+}
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   socket.on("get-lobbies", () => {
-    socket.emit("lobby-list", Array.from(lobbies.keys()))
+    socket.emit("lobby-list", getLobbyList())
   })
 
-  socket.on('join-lobby', (lobbyId: string, userId: string) => {
+  socket.on('join-lobby', async (
+    { lobbyId, username, password }: { lobbyId: string; username: string; password?: string },
+    ack?: (res: { ok: boolean; error?: string }) => void
+  ) => {
     const lobby = lobbies.get(lobbyId)
-    if (!lobby) return
+    if (!lobby) {
+      ack?.({ ok: false, error: "lobby does not exist" })
+      return
+    }
 
+    if (lobby.isPrivate) {
+      const valid = !!lobby.passwordHash && await bcryptjs.compare(password ?? "", lobby.passwordHash)
+      if (!valid) {
+        ack?.({ ok: false, error: "incorrect password" })
+        return
+      }
+    }
+
+    usernames.set(socket.id, username)
     socket.join(lobbyId)
     lobby.participants.add(socket.id)
+    // First user in the lobby becomes admin.
+    if (lobby.adminSocketId === null) lobby.adminSocketId = socket.id
+
     if (!lobbyHistory.has(lobbyId)) lobbyHistory.set(lobbyId, []);
     socket.emit("canvas-sync", lobbyHistory.get(lobbyId));
-    socket.to(lobbyId).emit("User connected", userId)
+    socket.to(lobbyId).emit("User connected", username)
+
+    ack?.({ ok: true })
+    broadcastLobbyList()
+  });
+
+  socket.on('create-lobby', async (
+    { name, isPrivate, password, username }: { name: string; isPrivate: boolean; password?: string; username: string },
+    ack?: (res: { ok: boolean; error?: string; lobbyId?: string }) => void
+  ) => {
+    const trimmed = (name ?? "").trim()
+    if (!trimmed) {
+      ack?.({ ok: false, error: "Name darf nicht leer sein" })
+      return
+    }
+    if (isPrivate && !(password ?? "").trim()) {
+      ack?.({ ok: false, error: "Passwort erforderlich" })
+      return
+    }
+
+    const nameTaken = Array.from(lobbies.values())
+      .some((l) => l.name.toLowerCase() === trimmed.toLowerCase())
+    if (nameTaken) {
+      ack?.({ ok: false, error: "Name vergeben" })
+      return
+    }
+
+    const id = generateLobbyId()
+    const passwordHash = isPrivate ? await bcryptjs.hash(password as string, BCRYPT_ROUNDS) : undefined
+
+    const lobby: Lobby = {
+      id,
+      name: trimmed,
+      isPrivate,
+      passwordHash,
+      isDefault: false,
+      adminSocketId: socket.id,
+      participants: new Set([socket.id]),
+    }
+    lobbies.set(id, lobby)
+
+    // auto join on lobby create
+    usernames.set(socket.id, username)
+    socket.join(id)
+    if (!lobbyHistory.has(id)) lobbyHistory.set(id, []);
+    socket.emit("canvas-sync", lobbyHistory.get(id));
+
+    ack?.({ ok: true, lobbyId: id })
+    broadcastLobbyList()
+  });
+
+  socket.on('leave-lobby', (lobbyId: string) => {
+    const lobby = lobbies.get(lobbyId)
+    if (!lobby) return
+    removeParticipant(socket, lobby)
+    broadcastLobbyList()
   });
 
   socket.on("draw", ({ lobbyId, data, canvasWidth }: { lobbyId: string; data: DrawEvent; canvasWidth?:number }) => {
@@ -274,11 +397,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    for(const lobby of lobbies.values()) {
-      if(lobby.participants.delete(socket.id)){
-        socket.to(lobby.id).emit("User disconnected", socket.id)
-      }
+    for (const lobby of Array.from(lobbies.values())) {
+      removeParticipant(socket, lobby)
     }
+    usernames.delete(socket.id)
+    broadcastLobbyList()
     console.log("User disconnected:", socket.id);
   });
 
