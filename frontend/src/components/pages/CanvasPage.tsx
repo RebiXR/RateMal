@@ -4,7 +4,6 @@ import '../../App.css';
 import Canvas from '../canvas/Canvas';
 import ToolWheel from '../toolbar/ToolWheel';
 import Prompts from '../canvas/Prompts';
-import LobbySelector from '../canvas/LobbySelector';
 import GuessingGameCreator from '../canvas/GuessingGame';
 import { AppContext } from '../../context/AppContext';
 import StickerMenu from '../sticker/stickerMenu';

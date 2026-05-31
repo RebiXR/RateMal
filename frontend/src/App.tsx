@@ -4,8 +4,10 @@ import CanvasPage from "./components/pages/CanvasPage";
 import StartPage from './components/pages/StartPage';
 import TopBar from './components/pages/TopBar';
 import Auth from './components/auth/Auth';
+import { AppContext } from './context/AppContext';
 
 function AuthModal({ onClose }: { onClose: () => void }) {
+  const { refreshUser } = useContext(AppContext);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSignIn({ email, password }: { email: string; password: string; remember: boolean }) {
@@ -22,6 +24,7 @@ function AuthModal({ onClose }: { onClose: () => void }) {
         setError(data.error ?? 'Login failed');
         return;
       }
+      await refreshUser();
       onClose();
     } catch {
       setError('Could not reach server');
@@ -43,6 +46,7 @@ function AuthModal({ onClose }: { onClose: () => void }) {
         setError(msg ?? 'registration error');
         return;
       }
+      await refreshUser();
       onClose();
     } catch {
       setError('could not reach server');

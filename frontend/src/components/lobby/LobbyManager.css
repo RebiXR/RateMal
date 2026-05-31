@@ -1,0 +1,250 @@
+
+.lm-trigger {
+  min-width: 140px;
+  font-weight: 700;
+}
+
+.lm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.lm-window {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+}
+
+.lm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.lm-head h2 {
+  margin: 0;
+  flex: 1;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.lm-close,
+.lm-back {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #555;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.lm-close:hover,
+.lm-back:hover {
+  background: #e5e7eb;
+}
+.lm-close:focus-visible,
+.lm-back:focus-visible {
+  outline: 3px solid #c7d2fe;
+  outline-offset: 2px;
+}
+
+.lm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+}
+
+/* ---------- Inputs ---------- */
+.lm-input {
+  width: 100%;
+  height: 48px;
+  box-sizing: border-box;
+  background: #f6f8fb;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 15px;
+  color: #1a1a1a;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.lm-input::placeholder {
+  color: #8a93a6;
+}
+.lm-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #1a6dd4;
+  box-shadow: 0 0 0 4px rgba(26, 109, 212, 0.18);
+}
+
+/* ---------- Lobby list ---------- */
+.lm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lm-lobby {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 1.5px solid #eef0f4;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.lm-lobby:hover {
+  border-color: #1a6dd4;
+  background: #f8fbff;
+}
+.lm-lobby:active {
+  transform: scale(0.99);
+}
+.lm-lobby:focus-visible {
+  outline: 3px solid #c7d2fe;
+  outline-offset: 2px;
+}
+.lm-lobby:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.lm-lobby.is-active {
+  border-color: #1a6dd4;
+  background: #eef6ff;
+}
+
+.lm-lobby__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lm-lobby__lock {
+  display: inline-flex;
+  color: #1a6dd4;
+}
+.lm-lobby__meta {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+}
+
+.lm-empty {
+  margin: 0;
+  padding: 28px 0;
+  text-align: center;
+  color: #8a93a6;
+  font-size: 14px;
+}
+
+/* ---------- Pager ---------- */
+.lm-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lm-pager .btn {
+  padding: 8px 14px;
+}
+.lm-pager__info {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* ---------- Actions ---------- */
+.lm-actions {
+  border-top: 1px solid #eef0f4;
+  padding-top: 14px;
+}
+.lm-create-btn,
+.lm-submit {
+  width: 100%;
+  font-weight: 700;
+  padding: 12px;
+}
+
+/* ---------- Forms (create / password) ---------- */
+.lm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lm-field > span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a6dd4;
+}
+
+.lm-segment {
+  display: flex;
+  gap: 8px;
+}
+.lm-segment button {
+  flex: 1;
+  height: 44px;
+  border: 1.5px solid #eef0f4;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #666;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.lm-segment button:hover {
+  border-color: #1a6dd4;
+}
+.lm-segment button:focus-visible {
+  outline: 3px solid #c7d2fe;
+  outline-offset: 2px;
+}
+.lm-segment button.is-active {
+  border-color: #1a6dd4;
+  background: #eef6ff;
+  color: #1a6dd4;
+}
+
+.lm-prompt {
+  margin: 0;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.lm-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #991b1b;
+}
