@@ -16,6 +16,15 @@ const prompts = ["Haus", "Hund", "Katze", "Vogel", "Baum", "Blume", "Sonne", "Ku
 const preposition = ["und", "neben", "vor", "mit"];
 
 
+function getOrCreateGuestName(): string {
+  const existing = localStorage.getItem("guest_username");
+  if (existing) return existing;
+  const name = `Gast-${Math.floor(1000 + Math.random() * 9000)}`;
+  localStorage.setItem("guest_username", name);
+  return name;
+}
+
+
 
 export const AppContext = createContext<any>({});
 //export const AppContext = createContext<any>(null);
@@ -25,6 +34,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentColor, setCurrentColor] = useState("black");
   //const [currentPrompt, setCurrentPrompt] = useState("Zeichne etwas Einfaches");
   const [activeLobbyId, setActiveLobbyId] = useState<string | null>(null)
+  const [activeLobbyName, setActiveLobbyName] = useState<string | null>(null)
+  const [username, setUsername] = useState<string>(() => getOrCreateGuestName())
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [tool, setTool] = useState<"pen" | "shape">("pen");
   //const [activeShape, setActiveShape] = useState<"blob" | null>(null);
   const [mirrorMode, setMirrorMode] = useState(false);
@@ -41,6 +53,27 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   //for inspo pics
   const [images, setImages] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
+
+  const refreshUser = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setUsername(data.username);
+        setIsAuthenticated(true);
+        return;
+      }
+    } catch {
+      // ignore errors fallback to guest
+    }
+    setUsername(getOrCreateGuestName());
+    setIsAuthenticated(false);
+  };
+
+  useEffect(() => {
+    refreshUser();
+  }, []);
+
 
   useEffect(() => {
   socket.on("groupPrompt", (prompt: string) => {
@@ -96,9 +129,14 @@ const searchImages = async (query: string) => {
       setCurrentColor, 
       currentPrompt, 
       setCurrentPrompt, 
-      activeLobbyId, 
+      activeLobbyId,
       setActiveLobbyId,
-      changePrompt, 
+      activeLobbyName,
+      setActiveLobbyName,
+      username,
+      isAuthenticated,
+      refreshUser,
+      changePrompt,
       groupPrompt, 
       requestGroupPrompt,
       tool,
@@ -128,5 +166,4 @@ const searchImages = async (query: string) => {
 
 export default AppProvider;
 
- 
 

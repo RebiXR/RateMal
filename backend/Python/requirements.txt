@@ -1,0 +1,8 @@
+"fastapi[standard]"
+scikit-learn
+opencv-python
+numpy
+torch 
+torchvision
+transformers 
+Pillow

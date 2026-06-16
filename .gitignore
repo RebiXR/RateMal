@@ -137,8 +137,16 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-package-lock.json*
-gitignore
 
-#API key
+# Paint-by-numbers test output
+backend/Python/test_original.jpg
+CLAUDE.md
+backend/Python/test_segmented.jpg
+backend/Python/test_segmented_contours.jpg
+backend/Python/test_paint_by_numbers.jpg
+package-lock.json*
+.gitignore
+pbn_output
+.idea
 .env
+backend/Python/__pycache__/

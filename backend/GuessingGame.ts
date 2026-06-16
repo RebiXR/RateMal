@@ -28,8 +28,4 @@ function createDrawGame() {
 export {GuessingGame}
 export {createDrawGame as createDrawGame}
 
-// Source - https://stackoverflow.com/a
-// Posted by Joe, modified by community. See post 'Timeline' for change history
-// Retrieved 2026-01-15, License - CC BY-SA 3.0
-
 

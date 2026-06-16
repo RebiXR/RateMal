@@ -1,13 +1,15 @@
-import LobbySelector from '../canvas/LobbySelector';
+import LobbyManager from '../lobby/LobbyManager';
 import Prompts from '../canvas/Prompts';
 import GuessingGameCreator from '../canvas/GuessingGame';
+import PBNGame from '../paintByNumbers/PBNGame';
 
 interface TopBarProps {
   view: 'home' | 'canvas';
   onBack: () => void;
+  onLoginClick?: () => void;
 }
 
-export default function TopBar({ view, onBack }: TopBarProps) {
+export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
   return (
     <div style={{ 
       height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
@@ -33,7 +35,7 @@ export default function TopBar({ view, onBack }: TopBarProps) {
 
       {/* MITTE: Lobby (Nur im Spiel) */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: '1 0 0' }}>
-        {view === 'canvas' && <div className="top-bar-element"><LobbySelector /></div>}
+        {view === 'canvas' && <div className="top-bar-element"><LobbyManager /></div>}
       </div>
 
       {/* RECHTS: Game-Controls (Nur im Spiel) */}
@@ -43,9 +45,30 @@ export default function TopBar({ view, onBack }: TopBarProps) {
             <div className="top-bar-element"><Prompts /></div>
             <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)' }} />
             <GuessingGameCreator />
+            <PBNGame />
           </>
         )}
-        {view === 'home' && <button className="btn btn-secondary">?</button>}
+        {view === 'home' && (
+          <>
+            <button
+              onClick={onLoginClick}
+              style={{
+                background: '#0a3cff',
+                color: '#fff',
+                padding: '10px 24px',
+                fontWeight: 700,
+                fontSize: '15px',
+                borderRadius: '10px',
+                border: 'none',
+                cursor: 'pointer',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Login
+            </button>
+            <button className="btn btn-secondary">?</button>
+          </>
+        )}
       </div>
     </div>
   );
