@@ -23,5 +23,5 @@ type ShapeDrawEvent ={
   color:string;
 };
 
-//ich hab hier export hinzugefügt
+
 export type DrawEvent = LineDrawEvent| ShapeDrawEvent;

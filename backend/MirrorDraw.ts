@@ -1,5 +1,3 @@
-// Mirror.ts
-//import { DrawEvent } from "./server"; // oder wo DrawEvent definiert ist
 import { DrawEvent } from "./DrawEvents.ts";
 
 function mirrorX(x: number, width: number) {

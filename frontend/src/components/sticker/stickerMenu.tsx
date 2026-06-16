@@ -1,9 +1,10 @@
 import { useContext, useState, useEffect } from "react";
 import { AppContext } from "../../context/AppContext";
-import { STICKER_CATEGORIES} from "./stickers.ts";
+import { STICKER_CATEGORIES } from "./stickers.ts";
 import type { Sticker } from "./stickers.ts";
 
-export default function StickerMenu() {
+// Prop hinzugefügt, um Schließen-Event ans ToolWheel zu senden
+export default function StickerMenu({ onSelect }: { onSelect?: () => void }) {
   const { setTool, activeShape, setActiveShape } = useContext(AppContext);
   const [customStickers, setCustomStickers] = useState<Sticker[]>([]);
 
@@ -38,9 +39,9 @@ export default function StickerMenu() {
   return (
     <div style={{ padding: "5px" }}>
       {Object.entries(allCats).map(([category, stickers]) => (
-        <div key={category} style={{ marginBottom: "24px" }}>
-          <h3 className="category-title">{category}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+        <div key={category} style={{ marginBottom: "20px" }}>
+          <h3 className="category-title" style={{ fontSize: '13px', margin: '0 0 8px 0', color: '#666' }}>{category}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
             
             {/* Spezieller Upload-Button nur in der Kategorie 'Eigene' */}
             {category === "Eigene" && (
@@ -49,17 +50,21 @@ export default function StickerMenu() {
                 display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" 
               }}>
                 <input type="file" hidden accept="image/*" onChange={handleFileUpload} />
-                <span style={{ fontSize: "24px" }}>+</span>
+                <span style={{ fontSize: "20px", color: '#666' }}>+</span>
               </label>
             )}
 
             {stickers.map(s => (
               <button 
                 key={s.id} 
-                onClick={() => { setTool("shape"); setActiveShape(s.id); }}
+                onClick={() => { 
+                  setTool("shape"); 
+                  setActiveShape(s.id); 
+                  if (onSelect) onSelect(); // Feuert das automatische Schließen des ToolWheels ab!
+                }}
                 className={activeShape === s.id ? "active-sticker" : ""}
                 style={{ 
-                  aspectRatio: "1/1", borderRadius: "12px", padding: "8px",
+                  aspectRatio: "1/1", borderRadius: "12px", padding: "6px",
                   background: activeShape === s.id ? "#eef" : "#f9f9f9",
                   border: activeShape === s.id ? "2px solid #1a6dd4" : "2px solid transparent"
                 }}
@@ -67,7 +72,7 @@ export default function StickerMenu() {
                 {s.isImage || s.icon.startsWith("data:") ? (
                   <img src={s.icon} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 ) : (
-                  <span style={{ fontSize: "24px" }}>{s.icon}</span>
+                  <span style={{ fontSize: "20px" }}>{s.icon}</span>
                 )}
               </button>
             ))}

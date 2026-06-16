@@ -13,10 +13,19 @@ import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
 import { connectDatabase, createUser, findUserByEmail, findUserById } from "./repository/databaseService.ts";
 
+import imageRoutes from "./imageRoutes.ts";
+import dotenv from "dotenv";
+dotenv.config();
+
+//test für api key:
+//console.log(process.env.PEXELS_API_KEY);
 const app = express();
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(imageRoutes);
+app.use("/", imageRoutes);
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -41,6 +50,9 @@ const loginSchema = z.object({
 
 type RegisterRequest = z.infer<typeof registerSchema>;
 type LoginRequest = z.infer<typeof loginSchema>;
+
+
+
 
 const httpServer = createServer(app);
 
