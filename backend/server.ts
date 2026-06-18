@@ -476,14 +476,17 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
+  httpServer.listen(Number(PORT), "0.0.0.0", () => {
+    console.log(`Backend läuft auf Port ${PORT}`);
+  });
+
   try {
     await connectDatabase();
-    httpServer.listen(Number(PORT), "0.0.0.0", () => {
-      console.log(`Backend läuft auf Port ${PORT}`);
-    });
   } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
+    console.error(
+      "!!Datenbank nicht erreichbar, Login/Registrierung nicht erreichbar!!",
+      error
+    );
   }
 }
 
