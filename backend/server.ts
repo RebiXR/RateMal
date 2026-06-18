@@ -258,6 +258,19 @@ io.on("connection", (socket) => {
     socket.emit("lobby-list", getLobbyList())
   })
 
+  socket.on("get-participants", (
+    lobbyId: string,
+    ack?: (participants: { id: string; username: string; isAdmin: boolean }[]) => void
+  ) => {
+    const lobby = lobbies.get(lobbyId);
+    if (!lobby) { ack?.([]); return; }
+    ack?.(Array.from(lobby.participants).map((sid) => ({
+      id: sid,
+      username: usernames.get(sid) ?? "Unbekannt",
+      isAdmin: lobby.adminSocketId === sid,
+    })));
+  })
+
   socket.on('join-lobby', async (
     { lobbyId, username, password }: { lobbyId: string; username: string; password?: string },
     ack?: (res: { ok: boolean; error?: string }) => void
