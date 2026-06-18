@@ -18,6 +18,7 @@ export async function connectDatabase(): Promise<void> {
 
   try {
     client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
       serverApi: {
         version: ServerApiVersion.v1,
         strict: true,
