@@ -119,6 +119,22 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
+
+/* Static (non-interactive) row, mirrors .lm-lobby for the participants list */
+.lm-participant {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 1.5px solid #eef0f4;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 600;
+}
 .lm-lobby:hover {
   border-color: #1a6dd4;
   background: #f8fbff;
