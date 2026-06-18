@@ -1,4 +1,5 @@
 import LobbyManager from '../lobby/LobbyManager';
+import LobbyParticipants from '../lobby/LobbyParticipants';
 import Prompts from '../canvas/Prompts';
 import GuessingGameCreator from '../canvas/GuessingGame';
 import PBNGame from '../paintByNumbers/PBNGame';
@@ -34,8 +35,13 @@ export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
       </div>
 
       {/* MITTE: Lobby (Nur im Spiel) */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: '1 0 0' }}>
-        {view === 'canvas' && <div className="top-bar-element"><LobbyManager /></div>}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', flex: '1 0 0' }}>
+        {view === 'canvas' && (
+          <>
+            <div className="top-bar-element"><LobbyManager /></div>
+            <div className="top-bar-element"><LobbyParticipants /></div>
+          </>
+        )}
       </div>
 
       {/* RECHTS: Game-Controls (Nur im Spiel) */}
