@@ -10,8 +10,17 @@ export type LobbyInfo = {
 export type JoinResponse = { ok: boolean; error?: string };
 export type CreateResponse = { ok: boolean; error?: string; lobbyId?: string };
 
+export type Participant = { id: string; username: string; isAdmin: boolean };
+
 export const requestLobbies = () => {
   socket.emit("get-lobbies");
+};
+
+export const requestParticipants = (
+  lobbyId: string,
+  ack: (participants: Participant[]) => void
+) => {
+  socket.emit("get-participants", lobbyId, ack);
 };
 
 export const onLobbyList = (callback: (lobbies: LobbyInfo[]) => void) => {
