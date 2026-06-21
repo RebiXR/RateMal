@@ -29,6 +29,14 @@ export interface GeneratePBNPayload {
 export const toPngDataUrl = (base64: string): string =>
   base64.startsWith("data:") ? base64 : `data:image/png;base64,${base64}`;
 
+//Converts a PBN color to a CSS string. Single source so values set as the drawing
+//color and values compared for the active-swatch highlight are byte-identical.
+export const pbnColorToCss = ({ r, g, b }: PBNColor): string => `rgb(${r}, ${g}, ${b})`;
+
+//Picks a readable text color for a swatch based on its luminance.
+export const swatchTextColor = ({ r, g, b }: PBNColor): string =>
+  0.299 * r + 0.587 * g + 0.114 * b > 140 ? "#1a1a1a" : "#ffffff";
+
 export const emitGeneratePBN = (payload: GeneratePBNPayload): void => {
   socket.emit("generate-pbn", payload);
 };
