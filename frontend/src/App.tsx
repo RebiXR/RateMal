@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import './App.css';
 import CanvasPage from "./components/pages/CanvasPage";
-import StartPage from './components/pages/StartPage';
+import StartPage, { type GameMode } from './components/pages/StartPage';
 import TopBar from './components/pages/TopBar';
 import Auth from './components/auth/Auth';
 import { AppContext } from './context/AppContext';
@@ -80,15 +80,16 @@ function AuthModal({ onClose }: { onClose: () => void }) {
 
 export default function App() {
   const [view, setView] = useState<'home' | 'canvas'>('home');
+  const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <TopBar view={view} onBack={() => setView('home')} onLoginClick={() => setIsAuthOpen(true)} />
+      <TopBar view={view} selectedMode={selectedMode} onBack={() => setView('home')} onLoginClick={() => setIsAuthOpen(true)} />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {view === 'home' ? (
-          <StartPage onSelectMode={() => setView('canvas')} />
+          <StartPage onSelectMode={(mode) => { setSelectedMode(mode); setView('canvas'); }} />
         ) : (
           <CanvasPage />
         )}

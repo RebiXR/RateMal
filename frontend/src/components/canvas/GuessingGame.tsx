@@ -29,8 +29,8 @@ export default function GuessingGameCreator() {
 
     if(!guessingGame){ return (
         <div>
-            <button 
-             className="btn btn-secondary"
+            <button
+             className="btn btn-secondary lm-trigger"
              onClick={joinGuessingGame}>
                 Starte Rate Spiel
             </button>

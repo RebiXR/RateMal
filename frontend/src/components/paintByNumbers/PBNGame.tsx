@@ -111,7 +111,7 @@ export default function PBNGame() {
 
   return (
     <>
-      <button className="btn btn-secondary" onClick={() => setOpen(true)}>
+      <button className="btn btn-secondary lm-trigger" onClick={() => setOpen(true)}>
         Malen Nach Zahlen
       </button>
 

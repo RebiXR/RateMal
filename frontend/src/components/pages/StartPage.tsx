@@ -1,7 +1,9 @@
 import React from 'react';
 
+export type GameMode = 'group-draw' | 'guessing-game' | 'paint-by-numbers';
+
 interface StartPageProps {
-  onSelectMode: (mode: 'canvas' | 'guessing-game') => void;
+  onSelectMode: (mode: GameMode) => void;
 }
 
 export default function StartPage({ onSelectMode }: StartPageProps) {
@@ -22,8 +24,8 @@ export default function StartPage({ onSelectMode }: StartPageProps) {
       }}>
         
         {/* Hauptkarte: Gemeinsam Zeichnen */}
-        <div 
-          onClick={() => onSelectMode('canvas')}
+        <div
+          onClick={() => onSelectMode('group-draw')}
           style={{ 
             gridColumn: 'span 2',
             background: '#1a6dd4',
@@ -59,17 +61,34 @@ export default function StartPage({ onSelectMode }: StartPageProps) {
           <p style={{ color: '#b45309' }}>Erkenne, was deine Freunde zeichnen.</p>
         </div>
 
-        {/* Platzhalter für weitere Spiele */}
-        <div style={{ 
-          background: 'white', 
-          border: '1px solid rgba(0,0,0,0.05)', 
-          padding: '32px', 
+        {/* Karte: Malen Nach Zahlen */}
+        <div
+          onClick={() => onSelectMode('paint-by-numbers')}
+          style={{
+            background: '#fffbeb',
+            border: '2px solid #fef3c7',
+            padding: '32px',
+            borderRadius: '24px',
+            cursor: 'pointer'
+          }}
+          className="mode-card-sub"
+        >
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🔢</div>
+          <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#92400e', marginBottom: '8px' }}>Malen Nach Zahlen</h3>
+          <p style={{ color: '#b45309' }}>Färbe ein Bild Feld für Feld nach Zahlen.</p>
+        </div>
+
+        {/* Platzhalter: Memory (im Aufbau) */}
+        <div style={{
+          background: 'white',
+          border: '1px solid rgba(0,0,0,0.05)',
+          padding: '32px',
           borderRadius: '24px',
           opacity: 0.6
         }}>
-          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🪞</div>
-          <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Spiegel-Zeichnen</h3>
-          <p style={{ color: '#666' }}>Symmetrische Kunst (Bald verfügbar).</p>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🃏</div>
+          <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Memory</h3>
+          <p style={{ color: '#666' }}>Im Aufbau – bald verfügbar.</p>
         </div>
 
       </div>

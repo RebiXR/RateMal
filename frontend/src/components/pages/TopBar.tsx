@@ -4,14 +4,16 @@ import Prompts from '../canvas/Prompts';
 import GuessingGameCreator from '../canvas/GuessingGame';
 import PBNGame from '../paintByNumbers/PBNGame';
 import SavedDrawingsGallery from '../canvas/SavedDrawingsGallery';
+import type { GameMode } from './StartPage';
 
 interface TopBarProps {
   view: 'home' | 'canvas';
+  selectedMode?: GameMode | null;
   onBack: () => void;
   onLoginClick?: () => void;
 }
 
-export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
+export default function TopBar({ view, selectedMode, onBack, onLoginClick }: TopBarProps) {
   return (
     <div style={{ 
       height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
@@ -45,15 +47,20 @@ export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
         )}
       </div>
 
-      {/* RECHTS: Game-Controls (Nur im Spiel) */}
+      {/* RECHTS: Game-Controls (Nur im Spiel, abhängig vom gewählten Modus) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', flex: '1 0 0' }}>
         {view === 'canvas' && (
           <>
-            <div className="top-bar-element"><Prompts /></div>
-            <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)' }} />
-            <GuessingGameCreator />
-            <PBNGame />
-            <SavedDrawingsGallery />
+            {selectedMode === 'group-draw' && (
+              <div className="top-bar-element"><Prompts /></div>
+            )}
+            {selectedMode === 'guessing-game' && (
+              <div className="top-bar-element"><GuessingGameCreator /></div>
+            )}
+            {selectedMode === 'paint-by-numbers' && (
+              <div className="top-bar-element"><PBNGame /></div>
+            )}
+            <div className="top-bar-element"><SavedDrawingsGallery /></div>
           </>
         )}
         {view === 'home' && (
