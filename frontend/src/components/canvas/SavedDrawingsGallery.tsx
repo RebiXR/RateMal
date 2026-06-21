@@ -58,7 +58,7 @@ export default function SavedDrawingsGallery() {
 
   return (
     <>
-      <button className="btn btn-secondary" onClick={() => setOpen(true)}>
+      <button className="btn btn-secondary lm-trigger" onClick={() => setOpen(true)}>
         Meine Zeichnungen
       </button>
 
