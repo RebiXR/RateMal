@@ -56,13 +56,11 @@ export default function SaveDrawing({ getThumbnail }: { getThumbnail: () => stri
 
   return (
     <>
-      <button
-        className="btn btn-secondary"
-        onClick={handleOpen}
-        style={{ position: "absolute", top: 12, right: 12, zIndex: 50 }}
-      >
-        Zeichnung Speichern
-      </button>
+      <div className="top-bar-element" style={{ position: "absolute", top: 12, right: 12, zIndex: 50 }}>
+        <button className="btn btn-secondary lm-trigger" onClick={handleOpen}>
+          Zeichnung Speichern
+        </button>
+      </div>
 
       {open &&
         createPortal(
