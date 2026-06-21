@@ -3,6 +3,7 @@ import LobbyParticipants from '../lobby/LobbyParticipants';
 import Prompts from '../canvas/Prompts';
 import GuessingGameCreator from '../canvas/GuessingGame';
 import PBNGame from '../paintByNumbers/PBNGame';
+import SavedDrawingsGallery from '../canvas/SavedDrawingsGallery';
 
 interface TopBarProps {
   view: 'home' | 'canvas';
@@ -52,6 +53,7 @@ export default function TopBar({ view, onBack, onLoginClick }: TopBarProps) {
             <div style={{ width: '1px', height: '32px', background: 'rgba(0,0,0,0.1)' }} />
             <GuessingGameCreator />
             <PBNGame />
+            <SavedDrawingsGallery />
           </>
         )}
         {view === 'home' && (
