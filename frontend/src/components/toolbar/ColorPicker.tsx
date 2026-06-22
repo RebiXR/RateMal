@@ -1,14 +1,10 @@
-
-import { useContext } from "react";
-import { AppContext } from "../../context/AppContext";
-import { twoKeyControls } from "../../input/twoKeyControls";
 import "../../style/colorPicker.css";
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 //import './colorPicker.css';
 
 
 // Deine bestehenden Farben hier eintragen
-export const COLORS = ['#111827', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff'];
+const COLORS = ['#111827', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff'];
 
 export default function ColorPicker({ currentColor, setCurrentColor, scanIndex }: {
   currentColor: string;

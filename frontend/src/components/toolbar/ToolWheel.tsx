@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { socket } from '../../socket/socket';

@@ -5,6 +5,10 @@ import { AppContext } from "../../context/AppContext";
 import { saveDrawing } from "../../api/drawingsApi";
 import "../lobby/LobbyManager.css";
 
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
+
 export default function SaveDrawing({ getThumbnail }: { getThumbnail: () => string | null }) {
   const { activeLobbyId, activeLobbyName, isAuthenticated } = useContext(AppContext);
 
@@ -47,8 +51,8 @@ export default function SaveDrawing({ getThumbnail }: { getThumbnail: () => stri
       await saveDrawing({ lobbyId: activeLobbyId, title, thumbnail });
       setDone(true);
       setTimeout(() => setOpen(false), 900);
-    } catch (err: any) {
-      setError(err?.message ?? "Speichern fehlgeschlagen");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Speichern fehlgeschlagen"));
     } finally {
       setBusy(false);
     }

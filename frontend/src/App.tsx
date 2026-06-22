@@ -5,6 +5,7 @@ import StartPage, { type GameMode } from './components/pages/StartPage';
 import TopBar from './components/pages/TopBar';
 import Auth from './components/auth/Auth';
 import { AppContext } from './context/AppContext';
+import MemoryPage from './components/memory/MemoryPage';
 
 function AuthModal({ onClose }: { onClose: () => void }) {
   const { refreshUser } = useContext(AppContext);
@@ -74,24 +75,46 @@ function AuthModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-
-
-
-
 export default function App() {
-  const [view, setView] = useState<'home' | 'canvas'>('home');
+  const [view, setView] = useState<'home' | 'canvas' | 'memory'>('home');
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
+  const openMode = (mode: GameMode) => {
+    if (mode === 'memory') {
+      setSelectedMode(null);
+      setView('memory');
+      return;
+    }
+    setSelectedMode(mode);
+    setView('canvas');
+  };
+
+  const goHome = () => {
+    setView('home');
+    setSelectedMode(null);
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <TopBar view={view} selectedMode={selectedMode} onBack={() => setView('home')} onLoginClick={() => setIsAuthOpen(true)} />
+      <a className="skip-link" href="#main-content">
+        Zum Inhalt springen
+      </a>
+      <TopBar
+        view={view}
+        selectedMode={selectedMode}
+        onBack={goHome}
+        onLoginClick={() => setIsAuthOpen(true)}
+        onMemoryClick={() => openMode('memory')}
+      />
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <main id="main-content" tabIndex={-1} style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {view === 'home' ? (
-          <StartPage onSelectMode={(mode) => { setSelectedMode(mode); setView('canvas'); }} />
-        ) : (
+          <StartPage onSelectMode={openMode} />
+        ) : view === 'canvas' ? (
           <CanvasPage />
+        ) : (
+          <MemoryPage />
         )}
       </main>
 
@@ -99,27 +122,3 @@ export default function App() {
     </div>
   );
 }
-      
-
-
-/*
-export default function App() {
-
-  //const { stickerSize, setStickerSize, showGrid } = useContext(AppContext);
-  //const [stickerOpen, setStickerOpen] = useState(false);
-  const [view, setView] = useState<'home' | 'canvas'>('home');
-
-  return (
-    <div className="main-layout">
-      <TopBar currentView={view} onBack={() => setView('home')} />
-      
-      <main style={{ flex: 1, position: 'relative' }}>
-        {view === 'home' ? (
-          <StartPage onSelectMode={() => setView('canvas')} />
-        ) : (
-          <CanvasPage />
-        )}
-      </main>
-    </div>
-  );
-}*/

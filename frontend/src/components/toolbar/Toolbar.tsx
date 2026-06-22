@@ -1,6 +1,5 @@
-import ColorPicker from "./ColorPicker";
 //import ShapeButton from "./ShapeButton";
-import { useRef, useEffect, useContext, useState } from "react";
+import { useContext } from "react";
 import { AppContext } from "../../context/AppContext";
 import PenButton from "./PenButton";
 import StickerMenu from "../sticker/stickerMenu";

@@ -7,7 +7,6 @@ import {
   onLobbyList,
   offLobbyList,
   type Participant,
-  type LobbyInfo,
 } from "../../socket/selectLobby";
 import "./LobbyManager.css";
 
@@ -31,7 +30,7 @@ export default function LobbyParticipants() {
     if (!open || !activeLobbyId) return;
     const refresh = () => requestParticipants(activeLobbyId, setParticipants);
     refresh();
-    const handleList = (_list: LobbyInfo[]) => refresh();
+    const handleList = () => refresh();
     onLobbyList(handleList);
     return () => offLobbyList(handleList);
   }, [open, activeLobbyId]);

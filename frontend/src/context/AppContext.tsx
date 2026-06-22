@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 //------------------------------------------------
 //Remmember:
 //Globel states: color, prompt, sticker,....
@@ -16,6 +17,11 @@ import type { PBNPaletteEntry } from "../socket/PBNEvents";
 const prompts = ["Haus", "Hund", "Katze", "Vogel", "Baum", "Blume", "Sonne", "Kuchen", "Pinsel", "Wolke", "Pferd", "Schmetterling", "Boot", "Apfel", "Karotte", "Hase", "Zug", "Tulpe", "Mensch", "Auto", "Stern", "Kleeblatt", "Blatt", "Maus", "Regenbogen", "Tropfen", "Schlange"];
 const preposition = ["und", "neben", "vor", "mit"];
 
+function randomPrompt() {
+  return prompts[Math.floor(Math.random() * prompts.length)] + " " +
+    preposition[Math.floor(Math.random() * preposition.length)] + " " +
+    prompts[Math.floor(Math.random() * prompts.length)];
+}
 
 function getOrCreateGuestName(): string {
   const existing = localStorage.getItem("guest_username");
@@ -106,11 +112,11 @@ const requestGroupPrompt = () => {
 };
   //---------------------------------------
   // this is the personal initial prompt
-  const [currentPrompt, setCurrentPrompt] = useState(prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)]);
+  const [currentPrompt, setCurrentPrompt] = useState(() => randomPrompt());
 
   // if user wants to intentionally change the prompt:
-  const changePrompt = () => {
-  const newPrompt = (prompts[Math.floor(Math.random() * prompts.length)] + " " + preposition[Math.floor(Math.random()*preposition.length)] + " " + prompts[Math.floor(Math.random()* prompts.length)]);
+const changePrompt = () => {
+  const newPrompt = randomPrompt();
   //für unterschiedliche schwierigkeiten
   //prompts[Math.floor(Math.random()* prompts.length)]; 
   //--------------------------------------

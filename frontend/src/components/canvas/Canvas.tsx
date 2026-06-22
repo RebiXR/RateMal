@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 //---------------------------------
 //
 //
@@ -8,6 +9,7 @@ import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync, type DrawEvent 
 import { onPBNReady, offPBNReady, toPngDataUrl, type PBNResult } from "../../socket/PBNEvents";
 import { renderSticker} from "../../utils/shapeHelpers";
 import { STICKER_CATEGORIES } from "../sticker/stickers";
+import type { Sticker } from "../sticker/stickers";
 import SaveDrawing from "./SaveDrawing";
 
 
@@ -16,7 +18,7 @@ type Point = { x: number; y: number };
 
 export default function Canvas() {
 
-  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid,setShowGrid, mirrorMode } = useContext(AppContext);
+  const { currentColor, activeLobbyId, tool, activeShape, stickerSize, penWidth, showGrid } = useContext(AppContext);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<Point | null>(null);
@@ -26,7 +28,7 @@ export default function Canvas() {
   const pbnImageRef = useRef<HTMLImageElement | null>(null);
 
   const [previewPos, setPreviewPos] = useState<Point | null>(null);
-  const [customStickers, setCustomStickers] = useState<any[]>([]);
+  const [customStickers, setCustomStickers] = useState<Sticker[]>([]);
   // Helpfunction, gets stickers as flat list
   //const allStickers = Object.values(STICKER_CATEGORIES).flat();
   const allStickers = [...Object.values(STICKER_CATEGORIES).flat(), ...customStickers];
@@ -93,7 +95,7 @@ export default function Canvas() {
 
 
   // ZENTRALE ZEICHEN-LOGIK (Fix für alle Sticker & Linien)
-  const renderEvent = (ctx: CanvasRenderingContext2D, data: any) => {
+  const renderEvent = (ctx: CanvasRenderingContext2D, data: DrawEvent) => {
 
     if (data.type === "shape") {
       renderSticker(ctx, data.shapeType, data.x, data.y, data.size || 60, allStickers, currentColor);

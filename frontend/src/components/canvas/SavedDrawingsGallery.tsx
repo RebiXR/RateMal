@@ -1,9 +1,14 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AppContext } from "../../context/AppContext";
-import { listDrawings, loadDrawing, deleteDrawing, type DrawingSummary } from "../../api/drawingsApi";
+import { deleteDrawing, listDrawings, loadDrawing, type DrawingSummary } from "../../api/drawingsApi";
 import "../lobby/LobbyManager.css";
 import "./SavedDrawings.css";
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error ? err.message : fallback;
+}
 
 export default function SavedDrawingsGallery() {
   const { isAuthenticated, activeLobbyId } = useContext(AppContext);
@@ -28,7 +33,7 @@ export default function SavedDrawingsGallery() {
     setBusy(true);
     listDrawings()
       .then(setItems)
-      .catch((e) => setError(e?.message ?? "Laden fehlgeschlagen"))
+      .catch((e: unknown) => setError(errorMessage(e, "Laden fehlgeschlagen")))
       .finally(() => setBusy(false));
   }, [open]);
 
@@ -42,8 +47,8 @@ export default function SavedDrawingsGallery() {
     try {
       await loadDrawing(id, activeLobbyId);
       setOpen(false);
-    } catch (e: any) {
-      setError(e?.message ?? "Laden fehlgeschlagen");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Laden fehlgeschlagen"));
     }
   };
 
@@ -51,8 +56,8 @@ export default function SavedDrawingsGallery() {
     try {
       await deleteDrawing(id);
       setItems((prev) => prev.filter((d) => d.id !== id));
-    } catch (e: any) {
-      setError(e?.message ?? "Löschen fehlgeschlagen");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Loeschen fehlgeschlagen"));
     }
   };
 
@@ -68,14 +73,14 @@ export default function SavedDrawingsGallery() {
             <div className="lm-window" onClick={(e) => e.stopPropagation()}>
               <div className="lm-head">
                 <h2>Meine Zeichnungen</h2>
-                <button className="lm-close" aria-label="Schließen" onClick={() => setOpen(false)}>
-                  ✕
+                <button className="lm-close" aria-label="Schliessen" onClick={() => setOpen(false)}>
+                  x
                 </button>
               </div>
               <div className="lm-body">
                 {error && <p className="lm-error">{error}</p>}
                 {busy ? (
-                  <p className="lm-empty">Lädt…</p>
+                  <p className="lm-empty">Laedt...</p>
                 ) : items.length === 0 ? (
                   <p className="lm-empty">Noch keine gespeicherten Zeichnungen.</p>
                 ) : (
@@ -88,8 +93,8 @@ export default function SavedDrawingsGallery() {
                           <button className="btn btn-secondary" onClick={() => handleLoad(d.id)}>
                             Laden
                           </button>
-                          <button className="btn" aria-label="Löschen" onClick={() => handleDelete(d.id)}>
-                            Löschen
+                          <button className="btn" aria-label="Loeschen" onClick={() => handleDelete(d.id)}>
+                            Loeschen
                           </button>
                         </div>
                       </div>

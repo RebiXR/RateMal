@@ -1,5 +1,12 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useContext, useState, useEffect } from "react";
 import { AppContext } from "../../context/AppContext";
+
+type SearchImage = {
+  id: number | string;
+  url: string;
+  alt: string;
+};
 
 interface ImageSearchProps {
   onSelect?: () => void;
@@ -26,7 +33,7 @@ export default function ImageSearch({ onSelect, focusedIndex = 0, triggerSelect 
     if (triggerSelect && images?.length > 0) {
       // Modulo-Rechnung stellt sicher, dass man nicht out of bounds geht
       const targetIndex = focusedIndex % images.length;
-      const targetImg = images[targetIndex];
+      const targetImg = images[targetIndex] as SearchImage | undefined;
       if (targetImg) {
         setSelectedImage(targetImg);
         onSelect?.();
@@ -34,7 +41,7 @@ export default function ImageSearch({ onSelect, focusedIndex = 0, triggerSelect 
     }
   }, [triggerSelect, focusedIndex, images]);
 
-  const handleImageClick = (img: any) => {
+  const handleImageClick = (img: SearchImage) => {
     setSelectedImage(img);
     onSelect?.();
   };
@@ -68,7 +75,7 @@ export default function ImageSearch({ onSelect, focusedIndex = 0, triggerSelect 
       {/* Ergebnis-Grid */}
       {images?.length > 0 ? (
         <div style={imageGridStyle}>
-          {images.map((img: any, idx: number) => {
+          {(images as SearchImage[]).map((img, idx) => {
             const isSelected = selectedImage?.id === img.id;
             // Berechne, ob dieses Bild den Tastaturfokus hat
             const isKeyboardFocused = (focusedIndex % images.length) === idx;

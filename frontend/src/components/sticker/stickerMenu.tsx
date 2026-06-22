@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useContext, useState, useEffect } from "react";
 import { AppContext } from "../../context/AppContext";
 import { STICKER_CATEGORIES } from "./stickers.ts";

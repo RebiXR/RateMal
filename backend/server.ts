@@ -12,6 +12,15 @@ import { lobbies, Lobby, getLobbyList, generateLobbyId } from "./lobby.ts";
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
+import {
+  createMemoryGame,
+  flipMemoryCard,
+  hideMemoryMismatch,
+  publicMemoryGame,
+  syncMemoryPlayers,
+  type MemoryCardInput,
+  type MemoryGame,
+} from "./MemoryGame.ts";
 import { connectDatabase, createUser, findUserByEmail, findUserById, createDrawing, findDrawingsByUser, findDrawingById, deleteDrawingById } from "./repository/databaseService.ts";
 import { ISavedDrawing } from "./repository/savedDrawing.ts";
 
@@ -226,11 +235,27 @@ const lobbyHistory = new Map<string, DrawEvent[]>();
 // for mirrored drawing option
 const lobbyMirrorMode = new Map<string, boolean>();
 
+// Memory game state per lobby.
+const memoryGames = new Map<string, MemoryGame>();
+
 // socketId -> username
 const usernames = new Map<string, string>();
 
 function broadcastLobbyList() {
   io.emit("lobby-list", getLobbyList());
+}
+
+function getParticipantList(lobby: Lobby) {
+  return Array.from(lobby.participants).map((sid) => ({
+    id: sid,
+    username: usernames.get(sid) ?? "Unbekannt",
+  }));
+}
+
+function emitMemoryState(lobbyId: string) {
+  const game = memoryGames.get(lobbyId);
+  if (!game) return;
+  io.to(lobbyId).emit("memory-state", publicMemoryGame(game));
 }
 
 // ---- Saved drawings (REST, JWT cookie auth) ----
@@ -342,6 +367,13 @@ function removeParticipant(socket: Socket, lobby: Lobby) {
 
   if (lobby.participants.size === 0 && !lobby.isDefault) {
     lobbies.delete(lobby.id);
+    memoryGames.delete(lobby.id);
+  } else {
+    const game = memoryGames.get(lobby.id);
+    if (game) {
+      syncMemoryPlayers(game, getParticipantList(lobby));
+      emitMemoryState(lobby.id);
+    }
   }
 }
 
@@ -395,6 +427,11 @@ io.on("connection", (socket) => {
 
     ack?.({ ok: true })
     broadcastLobbyList()
+    const memoryGame = memoryGames.get(lobbyId);
+    if (memoryGame) {
+      syncMemoryPlayers(memoryGame, getParticipantList(lobby));
+      emitMemoryState(lobbyId);
+    }
   });
 
   socket.on('create-lobby', async (
@@ -440,6 +477,76 @@ io.on("connection", (socket) => {
 
     ack?.({ ok: true, lobbyId: id })
     broadcastLobbyList()
+  });
+
+  socket.on("memory-get-state", (lobbyId: string) => {
+    const lobby = lobbies.get(lobbyId);
+    const game = memoryGames.get(lobbyId);
+    if (!lobby || !game) {
+      socket.emit("memory-state", null);
+      return;
+    }
+    syncMemoryPlayers(game, getParticipantList(lobby));
+    socket.emit("memory-state", publicMemoryGame(game));
+  });
+
+  socket.on("memory-start", (
+    { lobbyId, deck, options }: { lobbyId: string; deck: MemoryCardInput[]; options?: { pairCount?: number; maxMoves?: number | null } },
+    ack?: (res: { ok: boolean; error?: string }) => void
+  ) => {
+    const lobby = lobbies.get(lobbyId);
+    if (!lobby || !lobby.participants.has(socket.id)) {
+      ack?.({ ok: false, error: "Tritt zuerst einer Lobby bei." });
+      return;
+    }
+
+    const cleanDeck = (deck ?? []).filter((card) => card?.imageUrl);
+    const pairCount = Math.min(Math.max(Math.floor(options?.pairCount ?? 8), 2), 15);
+    const rawMaxMoves = options?.maxMoves;
+    const maxMoves = typeof rawMaxMoves === "number" && Number.isFinite(rawMaxMoves)
+      ? Math.max(1, Math.floor(rawMaxMoves))
+      : null;
+    if (cleanDeck.length < 2) {
+      ack?.({ ok: false, error: "Mindestens zwei Bilder werden benötigt." });
+      return;
+    }
+
+    if (cleanDeck.length < pairCount) {
+      ack?.({ ok: false, error: `Fuer ${pairCount} Paare brauchst du ${pairCount} Bilder im Deck.` });
+      return;
+    }
+
+    const game = createMemoryGame(lobbyId, cleanDeck, getParticipantList(lobby), { pairCount, maxMoves });
+    memoryGames.set(lobbyId, game);
+    emitMemoryState(lobbyId);
+    ack?.({ ok: true });
+  });
+
+  socket.on("memory-flip", ({ lobbyId, cardId }: { lobbyId: string; cardId: string }) => {
+    const game = memoryGames.get(lobbyId);
+    const lobby = lobbies.get(lobbyId);
+    if (!game || !lobby || !lobby.participants.has(socket.id)) return;
+
+    syncMemoryPlayers(game, getParticipantList(lobby));
+    const result = flipMemoryCard(game, cardId, socket.id);
+    if (!result.changed) return;
+
+    emitMemoryState(lobbyId);
+    if (result.mismatch) {
+      setTimeout(() => {
+        const current = memoryGames.get(lobbyId);
+        if (!current || current.id !== game.id) return;
+        hideMemoryMismatch(current);
+        emitMemoryState(lobbyId);
+      }, 1600);
+    }
+  });
+
+  socket.on("memory-reset", (lobbyId: string) => {
+    const lobby = lobbies.get(lobbyId);
+    if (!lobby || !lobby.participants.has(socket.id)) return;
+    memoryGames.delete(lobbyId);
+    io.to(lobbyId).emit("memory-state", null);
   });
 
   socket.on('leave-lobby', (lobbyId: string) => {
