@@ -1,7 +1,8 @@
 import 'dotenv/config';
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { Server, Socket } from "socket.io";
+import { randomUUID } from "crypto";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bcryptjs from "bcryptjs";
@@ -11,7 +12,8 @@ import { lobbies, Lobby, getLobbyList, generateLobbyId } from "./lobby.ts";
 import { createDrawGame, GuessingGame } from "./GuessingGame.ts";
 import { DrawEvent } from "./DrawEvents.ts";
 import { mirrorDrawEvent } from "./MirrorDraw.ts";
-import { connectDatabase, createUser, findUserByEmail, findUserById } from "./repository/databaseService.ts";
+import { connectDatabase, createUser, findUserByEmail, findUserById, createDrawing, findDrawingsByUser, findDrawingById, deleteDrawingById } from "./repository/databaseService.ts";
+import { ISavedDrawing } from "./repository/savedDrawing.ts";
 
 import imageRoutes from "./imageRoutes.ts";
 import dotenv from "dotenv";
@@ -230,6 +232,98 @@ const usernames = new Map<string, string>();
 function broadcastLobbyList() {
   io.emit("lobby-list", getLobbyList());
 }
+
+// ---- Saved drawings (REST, JWT cookie auth) ----
+
+// Verifies the authToken cookie and puts the user id on the request.
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const token = req.cookies?.authToken;
+  if (!token) {
+    res.status(401).json({ error: "not authenticated" });
+    return;
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    (req as any).userId = payload.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: "not authenticated" });
+  }
+}
+
+// Save the current lobby drawing to the authenticated user's account.
+app.post("/api/drawings", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId as string;
+    const { lobbyId, title, thumbnail } = req.body ?? {};
+    if (!lobbyId || typeof thumbnail !== "string") {
+      return res.status(400).json({ error: "lobbyId and thumbnail are required" });
+    }
+    const lobby = lobbies.get(lobbyId);
+    const drawing: ISavedDrawing = {
+      id: randomUUID(),
+      userId,
+      lobbyName: lobby?.name ?? "Lobby",
+      title: (title ?? "").toString().trim() || (lobby?.name ?? "Zeichnung"),
+      events: lobbyHistory.get(lobbyId) ?? [],
+      thumbnail,
+      createdAt: new Date(),
+    };
+    await createDrawing(drawing);
+    const { events, ...summary } = drawing;
+    res.status(201).json(summary);
+  } catch (error) {
+    console.error("Save drawing error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// List the authenticated user's saved drawings (without the events payload).
+app.get("/api/drawings", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId as string;
+    res.status(200).json(await findDrawingsByUser(userId));
+  } catch (error) {
+    console.error("List drawings error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Load a saved drawing into a lobby; replaces the lobby canvas for everyone.
+app.post("/api/drawings/:id/load", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId as string;
+    const { lobbyId } = req.body ?? {};
+    if (!lobbyId) {
+      return res.status(400).json({ error: "lobbyId is required" });
+    }
+    const drawing = await findDrawingById(req.params.id, userId);
+    if (!drawing) {
+      return res.status(404).json({ error: "drawing not found" });
+    }
+    lobbyHistory.set(lobbyId, drawing.events);
+    io.to(lobbyId).emit("canvas-sync", drawing.events);
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("Load drawing error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Delete one of the authenticated user's saved drawings.
+app.delete("/api/drawings/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId as string;
+    const deleted = await deleteDrawingById(req.params.id, userId);
+    if (!deleted) {
+      return res.status(404).json({ error: "drawing not found" });
+    }
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("Delete drawing error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // remove socket from lobby handle delete and admin assignment
 function removeParticipant(socket: Socket, lobby: Lobby) {

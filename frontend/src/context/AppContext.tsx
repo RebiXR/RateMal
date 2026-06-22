@@ -8,6 +8,7 @@ import type { GuessingGame } from "../components/canvas/GuessingGame";
 //import io from "socket.io-client";
 import { socket } from "../socket/socket";
 import { searchImages as fetchImages } from "../api/imageApi";
+import type { PBNPaletteEntry } from "../socket/PBNEvents";
 
 
 //const socket = io("http://localhost:3000");
@@ -53,6 +54,9 @@ const AppProvider = ({ children }: { children: ReactNode }) => {
   //for inspo pics
   const [images, setImages] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
+
+  // Active PBN palette; set by PBNGame on `pbn-ready`, cleared when leaving PBN mode.
+  const [pbnPalette, setPbnPalette] = useState<PBNPaletteEntry[] | null>(null);
 
   const refreshUser = async () => {
     try {
@@ -156,6 +160,8 @@ const searchImages = async (query: string) => {
       searchImages,
       selectedImage,
       setSelectedImage,
+      pbnPalette,
+      setPbnPalette,
 
       }}>
   

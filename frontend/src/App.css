@@ -202,6 +202,13 @@ input[type="range"]::-webkit-slider-thumb {
   transform: translateY(-1px);
 }
 
+/* Im Top-Bar-Container überschreibt `.top-bar-element button` die Chip-Farbe;
+   diese scoped Regeln stellen die Farbkodierung der aufgedeckten Prompts wieder her. */
+.top-bar-element .btn-prompt { background: #fffbeb; }
+.top-bar-element .btn-prompt-personal { background: #f0f9ff; }
+.top-bar-element .btn-prompt:hover { background: #fef3c7; }
+.top-bar-element .btn-prompt-personal:hover { background: #e0f2fe; }
+
 
 
 

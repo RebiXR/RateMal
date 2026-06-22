@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { socket } from '../../socket/socket';
 import StickerMenu from '../sticker/stickerMenu';
-import ImageSearch from '../canvas/ImageSearch'; 
+import ImageSearch from '../canvas/ImageSearch';
+import { pbnColorToCss, swatchTextColor } from '../../socket/PBNEvents';
 import '../../App.css';
 
 const WHEEL_RADIUS = 80;
@@ -16,14 +17,26 @@ interface ToolWheelProps {
 }
 
 export default function ToolWheel({ stickerModeActive, setStickerModeActive }: ToolWheelProps) {
-  const { 
-    currentColor, setCurrentColor, 
-    tool, setTool, 
-    mirrorMode, setMirrorMode, 
-    activeLobbyId, 
+  const {
+    currentColor, setCurrentColor,
+    tool, setTool,
+    mirrorMode, setMirrorMode,
+    activeLobbyId,
     penWidth, setPenWidth,
+    pbnPalette,
     stickerSize, setStickerSize,
   } = useContext(AppContext);
+
+  // In PBN mode (palette loaded) the colour submenu shows the PBN colours with their
+  // numbers instead of the standard swatches.
+  const usingPbn = Array.isArray(pbnPalette) && pbnPalette.length > 0;
+  const colorSwatches: { bg: string; label: string; text?: string }[] = usingPbn
+    ? pbnPalette.map((e: { index: number; color: { r: number; g: number; b: number } }) => ({
+        bg: pbnColorToCss(e.color),
+        label: String(e.index),
+        text: swatchTextColor(e.color),
+      }))
+    : COLORS.map((c) => ({ bg: c, label: '' }));
 
   const [visible, setVisible] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -34,6 +47,10 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
 
   // State für den aktuell fokussierten Eintrag im submenü
   const [subIndex, setSubIndex] = useState<number>(0);
+
+  // Erst true, sobald per Tastatur navigiert wurde — verhindert, dass das erste
+  // Element ohne Interaktion als "fokussiert" markiert wird (Maus-Nutzung).
+  const [navigated, setNavigated] = useState<boolean>(false);
 
   // Trigger-State, um ein Enter-Signal an Sticker/Bilder-Komponenten weiterzureichen
   const [triggerSelect, setTriggerSelect] = useState<boolean>(false);
@@ -72,6 +89,7 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
   useEffect(() => {
     setSubIndex(0);
     setTriggerSelect(false);
+    setNavigated(false);
   }, [activeSub]);
 
   const toggleMirror = () => {
@@ -127,10 +145,11 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
       if (activeSub === 'color') {
         if (e.key === 'ArrowRight') {
           e.preventDefault();
-          setSubIndex((prev) => (prev + 1) % COLORS.length);
+          setNavigated(true);
+          setSubIndex((prev) => (prev + 1) % colorSwatches.length);
         } else if (e.key === 'Enter') {
           e.preventDefault();
-          setCurrentColor(COLORS[subIndex]);
+          setCurrentColor(colorSwatches[subIndex].bg);
           setActiveSub(null);
           setVisible(false);
         } else if (e.key === 'Escape') {
@@ -144,6 +163,7 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
       if (activeSub === 'size') {
         if (e.key === 'ArrowRight') {
           e.preventDefault();
+          setNavigated(true);
           setSubIndex((prev) => (prev + 1) % SIZES.length);
         } else if (e.key === 'Enter') {
           e.preventDefault();
@@ -194,7 +214,7 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [visible, activeIndex, subIndex, activeSub, menuItems]);
+  }, [visible, activeIndex, subIndex, activeSub, menuItems, pbnPalette]);
 
   if (!visible) return null;
 
@@ -244,30 +264,38 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
             <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>Farbe wählen</span>
             <button onClick={() => setActiveSub(null)} style={backButtonStyle}>Zurück</button>
           </div>
-          <div style={colorGridStyle}>
-            {COLORS.map((c, i) => {
-              const isKeyboardFocused = i === subIndex;
+          <div style={{ ...colorGridStyle, maxHeight: '160px', overflowY: 'auto', padding: '6px' }}>
+            {colorSwatches.map((sw, i) => {
+              const isKeyboardFocused = navigated && i === subIndex;
               return (
-                <div 
-                  key={c} 
-                  onClick={() => { 
-                    setCurrentColor(c); 
-                    setActiveSub(null); 
-                    setVisible(false); 
-                  }} 
-                  style={{ 
-                    ...colorCircleStyle, 
-                    background: c, 
+                <div
+                  key={`${sw.bg}-${i}`}
+                  onClick={() => {
+                    setCurrentColor(sw.bg);
+                    setActiveSub(null);
+                    setVisible(false);
+                  }}
+                  style={{
+                    ...colorCircleStyle,
+                    background: sw.bg,
+                    color: sw.text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '14px',
                     outline: isKeyboardFocused
                       ? '3px solid #1a6dd4'
-                      : currentColor === c 
-                        ? '2px solid #1a6dd4' 
+                      : currentColor === sw.bg
+                        ? '2px solid #1a6dd4'
                         : '1px solid rgba(0,0,0,0.2)',
                     outlineOffset: '2px',
                     transform: isKeyboardFocused ? 'scale(1.1)' : 'scale(1)',
                     transition: 'transform 0.15s ease, outline 0.15s ease'
-                  }} 
-                />
+                  }}
+                >
+                  {sw.label}
+                </div>
               );
             })}
           </div>
@@ -284,7 +312,7 @@ export default function ToolWheel({ stickerModeActive, setStickerModeActive }: T
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
             {SIZES.map((s, i) => {
-              const isKeyboardFocused = i === subIndex;
+              const isKeyboardFocused = navigated && i === subIndex;
               return (
                 <div 
                   key={s} 

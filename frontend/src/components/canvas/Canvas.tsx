@@ -8,6 +8,7 @@ import { emitDraw, onDraw, offDraw, onCanvasSync, offCanvasSync, type DrawEvent 
 import { onPBNReady, offPBNReady, toPngDataUrl, type PBNResult } from "../../socket/PBNEvents";
 import { renderSticker} from "../../utils/shapeHelpers";
 import { STICKER_CATEGORIES } from "../sticker/stickers";
+import SaveDrawing from "./SaveDrawing";
 
 
 type Point = { x: number; y: number };
@@ -19,6 +20,10 @@ export default function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<Point | null>(null);
+  // Clientseitige Kopie aller gezeichneten Events, damit der Canvas nach einem
+  // Resize (z.B. Browser-Zoom) verlustfrei neu aufgebaut werden kann.
+  const historyRef = useRef<DrawEvent[]>([]);
+  const pbnImageRef = useRef<HTMLImageElement | null>(null);
 
   const [previewPos, setPreviewPos] = useState<Point | null>(null);
   const [customStickers, setCustomStickers] = useState<any[]>([]);
@@ -79,6 +84,7 @@ export default function Canvas() {
       size: stickerSize
     };
     renderEvent(ctx, eventData);
+    historyRef.current.push(eventData);
     emitDraw({lobbyId: activeLobbyId, data: eventData});
   };
 
@@ -151,6 +157,7 @@ export default function Canvas() {
       };
       
       renderEvent(ctx, eventData);
+      historyRef.current.push(eventData);
       emitDraw({ lobbyId: activeLobbyId, canvasWidth: canvasRef.current!.width, data: eventData });
       return;
     }
@@ -177,6 +184,7 @@ export default function Canvas() {
     };
 
     renderEvent(ctx, eventData);
+    historyRef.current.push(eventData);
     emitDraw({ lobbyId: activeLobbyId, canvasWidth: canvasRef.current!.width, data: eventData });
     lastPoint.current = p;
   };
@@ -184,6 +192,23 @@ export default function Canvas() {
   const endDraw = () => {
     isDrawing.current = false;
     lastPoint.current = null;
+  };
+
+  // Kleines JPEG-Vorschaubild des aktuellen Canvas für die Galerie.
+  const makeThumbnail = (): string | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const maxW = 320;
+    const scale = Math.min(1, maxW / canvas.width);
+    const off = document.createElement("canvas");
+    off.width = Math.max(1, Math.round(canvas.width * scale));
+    off.height = Math.max(1, Math.round(canvas.height * scale));
+    const octx = off.getContext("2d");
+    if (!octx) return null;
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0, 0, off.width, off.height);
+    octx.drawImage(canvas, 0, 0, off.width, off.height);
+    return off.toDataURL("image/jpeg", 0.7);
   };
 
 
@@ -230,39 +255,54 @@ export default function Canvas() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
-    // Resize Observer damit Canvas bei Größenänderung mitgeht
+    // Zeichnet eine geladene PBN-Vorlage zentriert/eingepasst auf den Canvas.
+    const drawPbn = (img: HTMLImageElement) => {
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+    };
+
+    // Baut den Canvas komplett aus dem gehaltenen Zustand neu auf.
+    const repaint = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (pbnImageRef.current) drawPbn(pbnImageRef.current);
+      historyRef.current.forEach((ev) => renderEvent(ctx, ev));
+    };
+
+    // Resize Observer damit Canvas bei Größenänderung mitgeht.
+    // Hinweis: canvas.width/height neu zu setzen LEERT das Bitmap, deshalb
+    // zeichnen wir aus historyRef neu, statt das alte Bitmap zu kopieren
+    // (getImageData/putImageData würde beim Verkleinern abschneiden).
     const ro = new ResizeObserver(() => {
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
-      ctx.putImageData(imageData, 0, 0);
+      repaint();
     });
     ro.observe(container);
 
 
     // LIVE ZEICHNEN VON ANDEREN
     onDraw((data) => {
+      historyRef.current.push(data);
       renderEvent(ctx, data);
     });
 
     // HISTORY LADEN
     onCanvasSync((history) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      console.log("SYNC HISTORY", history.length);
-      history.forEach(ev => renderEvent(ctx, ev));
+      historyRef.current = [...history];
+      repaint();
     });
 
     // PAINT-BY-NUMBERS Vorlage auf den Canvas legen
     const handlePBNReady = (result: PBNResult) => {
       const img = new Image();
       img.onload = () => {
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        const w = img.width * scale;
-        const h = img.height * scale;
-        const x = (canvas.width - w) / 2;
-        const y = (canvas.height - h) / 2;
+        pbnImageRef.current = img;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, x, y, w, h);
+        drawPbn(img);
       };
       img.src = toPngDataUrl(result.pbn_template);
     };
@@ -284,7 +324,9 @@ export default function Canvas() {
   return (
 
     <div style={{ position: 'relative', width: '100%', height: '100%', cursor: tool === 'shape' ? 'none' : 'crosshair' }}>
-    
+
+    <SaveDrawing getThumbnail={makeThumbnail} />
+
     <canvas
       ref={canvasRef}
       style={{ touchAction: "none", backgroundColor: "#ffffff", display: 'block', width:'100%', height:'100%',

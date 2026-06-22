@@ -1,14 +1,17 @@
 import 'dotenv/config';
 import { MongoClient, ServerApiVersion, ObjectId, Db, Collection } from 'mongodb';
 import { User, IUser, CreateUserDTO, UserResponseDTO } from './user.ts';
+import { ISavedDrawing, SavedDrawingSummary } from './savedDrawing.ts';
 
 const uri = process.env.MONGODB_URI as string;
 const databaseName = "RateMalDB";
 const usersCollectionName = "users";
+const drawingsCollectionName = "saved_drawings";
 
 let client: MongoClient | null = null;
 let db: Db | null = null;
 let usersCollection: Collection<IUser> | null = null;
+let drawingsCollection: Collection<ISavedDrawing> | null = null;
 
 export async function connectDatabase(): Promise<void> {
   if (client && db) {
@@ -29,6 +32,7 @@ export async function connectDatabase(): Promise<void> {
     await client.connect();
     db = client.db(databaseName);
     usersCollection = db.collection<IUser>(usersCollectionName);
+    drawingsCollection = db.collection<ISavedDrawing>(drawingsCollectionName);
 
     // Verify connection
     await db.admin().command({ ping: 1 });
@@ -47,6 +51,9 @@ async function createIndexes(): Promise<void> {
   try {
     // Create unique index on email
     await usersCollection.createIndex({ email: 1 }, { unique: true });
+    if (drawingsCollection) {
+      await drawingsCollection.createIndex({ userId: 1 });
+    }
     console.log("Database indexes created");
   } catch (error) {
     console.error("Error creating indexes:", error);
@@ -59,15 +66,23 @@ export async function disconnectDatabase(): Promise<void> {
     client = null;
     db = null;
     usersCollection = null;
+    drawingsCollection = null;
     console.log("Database connection closed");
   }
 }
 
 function getUsersCollection(): Collection<IUser> {
   if (!usersCollection) {
-    throw new Error("Database not connected. Call connectDatabase() first.");
+    throw new Error("Failed to get users! DB not connected.");
   }
   return usersCollection;
+}
+
+function getDrawingsCollection(): Collection<ISavedDrawing> {
+  if (!drawingsCollection) {
+    throw new Error("Failed to get drawings! DB not connected.");
+  }
+  return drawingsCollection;
 }
 
 export async function createUser(userData: CreateUserDTO): Promise<UserResponseDTO> {
@@ -138,4 +153,32 @@ export async function updateUsername(id: string, username: string): Promise<IUse
 export async function getUserCount(): Promise<number> {
   const collection = getUsersCollection();
   return await collection.countDocuments();
+}
+
+// ---- Saved drawings ----
+
+export async function createDrawing(drawing: ISavedDrawing): Promise<ISavedDrawing> {
+  const collection = getDrawingsCollection();
+  // Insert a copy so the driver-added `_id` doesn't leak into the returned object.
+  await collection.insertOne({ ...drawing } as any);
+  return drawing;
+}
+
+export async function findDrawingsByUser(userId: string): Promise<SavedDrawingSummary[]> {
+  const collection = getDrawingsCollection();
+  return await collection
+    .find({ userId }, { projection: { events: 0, _id: 0 } })
+    .sort({ createdAt: -1 })
+    .toArray() as unknown as SavedDrawingSummary[];
+}
+
+export async function findDrawingById(id: string, userId: string): Promise<ISavedDrawing | null> {
+  const collection = getDrawingsCollection();
+  return await collection.findOne({ id, userId }, { projection: { _id: 0 } }) as ISavedDrawing | null;
+}
+
+export async function deleteDrawingById(id: string, userId: string): Promise<boolean> {
+  const collection = getDrawingsCollection();
+  const result = await collection.deleteOne({ id, userId });
+  return result.deletedCount > 0;
 }

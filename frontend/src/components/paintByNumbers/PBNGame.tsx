@@ -9,16 +9,12 @@ import {
   onPBNError,
   offPBNError,
   toPngDataUrl,
-  type PBNColor,
+  pbnColorToCss,
+  swatchTextColor,
   type PBNPaletteEntry,
   type PBNResult,
 } from "../../socket/PBNEvents";
 import "./PBNGame.css";
-
-/** Picks a readable text colour for a swatch based on its luminance. */
-function swatchTextColor({ r, g, b }: PBNColor): string {
-  return 0.299 * r + 0.587 * g + 0.114 * b > 140 ? "#1a1a1a" : "#ffffff";
-}
 
 // Restiction to 1200px img size for PBN pipeline speedup
 const MAX_DIM = 1200;
@@ -53,7 +49,8 @@ function downscaleImage(file: File): Promise<string> {
 }
 
 export default function PBNGame() {
-  const { activeLobbyId } = useContext(AppContext);
+  const { activeLobbyId, currentColor, setCurrentColor, pbnPalette, setPbnPalette } =
+    useContext(AppContext);
 
   const [open, setOpen] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -61,7 +58,6 @@ export default function PBNGame() {
   const [difficulty, setDifficulty] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [palette, setPalette] = useState<PBNPaletteEntry[] | null>(null);
   const [completed, setCompleted] = useState<string | null>(null);
   const [portalEl] = useState(() => document.createElement("div"));
 
@@ -72,9 +68,13 @@ export default function PBNGame() {
     };
   }, [portalEl]);
 
+  // Clear the shared palette when leaving PBN mode (component unmounts) so the
+  // tool wheel only shows PBN colours while this mode is active.
+  useEffect(() => () => setPbnPalette(null), []);
+
   useEffect(() => {
     const handleReady = (result: PBNResult) => {
-      setPalette(result.palette);
+      setPbnPalette(result.palette);
       setCompleted(result.completed);
       setLoading(false);
     };
@@ -111,7 +111,7 @@ export default function PBNGame() {
 
   return (
     <>
-      <button className="btn btn-secondary" onClick={() => setOpen(true)}>
+      <button className="btn btn-secondary lm-trigger" onClick={() => setOpen(true)}>
         Malen Nach Zahlen
       </button>
 
@@ -170,21 +170,23 @@ export default function PBNGame() {
               {/* Panel 2 — palette */}
               <section className="pbn-panel">
                 <h3>2 · Farbpalette</h3>
-                {palette ? (
+                {pbnPalette ? (
                   <div className="pbn-palette">
-                    {palette.map((entry) => (
-                      <div
-                        key={entry.index}
-                        className="pbn-swatch"
-                        style={{
-                          background: `rgb(${entry.color.r}, ${entry.color.g}, ${entry.color.b})`,
-                          color: swatchTextColor(entry.color),
-                        }}
-                        title={`Farbe ${entry.index}`}
-                      >
-                        {entry.index}
-                      </div>
-                    ))}
+                    {pbnPalette.map((entry: PBNPaletteEntry) => {
+                      const css = pbnColorToCss(entry.color);
+                      return (
+                        <div
+                          key={entry.index}
+                          className={"pbn-swatch" + (currentColor === css ? " is-selected" : "")}
+                          style={{ background: css, color: swatchTextColor(entry.color) }}
+                          onClick={() => setCurrentColor(css)}
+                          role="button"
+                          title={`Farbe ${entry.index} auswählen`}
+                        >
+                          {entry.index}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="pbn-placeholder">Noch keine Palette.</p>

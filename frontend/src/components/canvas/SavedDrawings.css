@@ -1,0 +1,39 @@
+.sd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.sd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1.5px solid #eef0f4;
+  border-radius: 12px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.sd-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #eef0f4;
+}
+
+.sd-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sd-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
